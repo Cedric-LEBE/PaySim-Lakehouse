@@ -18,6 +18,29 @@ def metrics(frame, keys=()):
                   F.col('fraud_transactions') / F.col('total_transactions')).cast('decimal(18,8)'))
 
 
+def validate(frame):
+    from pyspark.sql import functions as F
+    from pyspark.sql.types import DecimalType
+    required = {'event_id', 'dataset_id', 'step', 'type', 'amount', 'isFraud', 'isFlaggedFraud', 'bronze_version'}
+    if not required.issubset(frame.columns):
+        raise ValueError('Colonnes Silver manquantes')
+    if frame.schema['amount'].dataType != DecimalType(20, 2):
+        raise ValueError('amount doit être Decimal(20,2)')
+    valid = (F.col('event_id').isNotNull() & (F.length(F.trim('dataset_id')) > 0)
+             & F.col('bronze_version').isNotNull() & (F.col('step') >= 1)
+             & F.col('type').isin('PAYMENT', 'TRANSFER', 'CASH_OUT', 'CASH_IN', 'DEBIT')
+             & (F.col('amount') >= 0) & F.col('isFraud').isin(0, 1)
+             & F.col('isFlaggedFraud').isin(0, 1))
+    check = frame.agg(F.count('*').alias('rows'), F.countDistinct('event_id').alias('ids'),
+                      F.countDistinct('dataset_id').alias('datasets'),
+                      F.count(F.when(~F.coalesce(valid, F.lit(False)), True)).alias('invalid'),
+                      F.min('dataset_id').alias('dataset_id'),
+                      F.max('bronze_version').alias('bronze_version')).first()
+    if check.invalid or check.rows != check.ids or check.datasets > 1:
+        raise ValueError('Silver invalide : doublons, valeurs invalides ou sources mélangées')
+    return check
+
+
 def build(spark, source, output):
     from delta.tables import DeltaTable
     from pyspark.sql import functions as F
@@ -27,27 +50,14 @@ def build(spark, source, output):
         raise ValueError('Silver et Gold doivent être dans des dossiers distincts sans imbrication')
     if not (source / '_delta_log').exists():
         raise ValueError('Table Silver Delta absente')
+    from banking.silver_incremental import ensure_published
+    ensure_published(source)
+    if (output / '_gold_incremental.json').exists():
+        raise ValueError('Destination Gold incrémentale : choisir une sortie batch distincte')
     version = DeltaTable.forPath(spark, str(source)).history(1).select('version').first()[0]
     frame = spark.read.format('delta').option('versionAsOf', version).load(str(source)).persist()
     try:
-        required = {'event_id', 'dataset_id', 'step', 'type', 'amount', 'isFraud', 'isFlaggedFraud', 'bronze_version'}
-        if not required.issubset(frame.columns):
-            raise ValueError('Colonnes Silver manquantes')
-        if frame.schema['amount'].dataType != DecimalType(20, 2):
-            raise ValueError('amount doit être Decimal(20,2)')
-        valid = (F.col('event_id').isNotNull() & (F.length(F.trim('dataset_id')) > 0)
-                 & F.col('bronze_version').isNotNull() & (F.col('step') >= 1)
-                 & F.col('type').isin('PAYMENT', 'TRANSFER', 'CASH_OUT', 'CASH_IN', 'DEBIT')
-                 & (F.col('amount') >= 0) & F.col('isFraud').isin(0, 1)
-                 & F.col('isFlaggedFraud').isin(0, 1))
-        check = frame.agg(F.count('*').alias('rows'), F.countDistinct('event_id').alias('ids'),
-                          F.countDistinct('dataset_id').alias('datasets'),
-                          F.countDistinct('bronze_version').alias('bronze_versions'),
-                          F.count(F.when(~F.coalesce(valid, F.lit(False)), True)).alias('invalid'),
-                          F.min('dataset_id').alias('dataset_id'),
-                          F.min('bronze_version').alias('bronze_version')).first()
-        if check.invalid or check.rows != check.ids or check.datasets > 1 or check.bronze_versions > 1:
-            raise ValueError('Silver invalide : doublons, valeurs invalides ou sources mélangées')
+        check = validate(frame)
         tables = {'summary': metrics(frame), 'by_type': metrics(frame, ('type',)),
                   'by_step': metrics(frame, ('step',))}
         summary = tables['summary'].first().asDict()
@@ -75,11 +85,16 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source', default='data/silver/transactions')
     parser.add_argument('--output', default='data/gold')
+    parser.add_argument('--mode', choices=['incremental', 'batch'], default='incremental')
     args = parser.parse_args()
     spark = session()
     spark.sparkContext.setLogLevel('WARN')
     try:
-        build(spark, args.source, args.output)
+        if args.mode == 'incremental':
+            from banking.gold_incremental import build as incremental
+            incremental(spark, args.source, args.output)
+        else:
+            build(spark, args.source, args.output)
     finally:
         spark.stop()
 

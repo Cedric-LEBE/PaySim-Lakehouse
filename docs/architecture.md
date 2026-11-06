@@ -16,7 +16,7 @@ flowchart TB
     Star --> SQL[Vues temporaires Spark SQL]
 ```
 
-Le producer et Spark s'exécutent sur l'hôte ; seul Kafka s'exécute dans Docker. Bronze utilise Structured Streaming avec `availableNow` : les données disponibles au démarrage sont traitées en micro-batches, puis la requête s'arrête. Silver, Gold et l'étoile sont des reconstructions batch de snapshots.
+Le producer et Spark s'exécutent sur l'hôte ; seul Kafka s'exécute dans Docker. Bronze utilise Structured Streaming avec `availableNow` : les données disponibles au démarrage sont traitées en micro-batches, puis la requête s'arrête. Silver, Gold et l'étoile utilisent des traitements incrémentaux bornés par versions Delta après initialisation.
 
 ## Contrat d'événement
 
@@ -63,7 +63,7 @@ La table et son checkpoint doivent être conservés ensemble, dans des dossiers 
 
 ## Silver — qualité et déduplication
 
-Silver lit une version précise de Bronze et applique les contrôles suivants :
+Silver utilise par défaut une lecture incrémentale du Change Data Feed (CDF) de Bronze. Une première lecture complète initialise le traitement ; les exécutions suivantes lisent uniquement les versions nouvelles, bornées par un curseur durable. Les contrôles restent les suivants :
 
 - Dataset sélectionné, enveloppe et version supportées.
 - Ligne source positive et event_id cohérent avec dataset et ligne source.
@@ -76,22 +76,40 @@ Toutes les lignes hors périmètre ou invalides sont écrites en quarantaine ave
 
 Les contenus typés sont comparés par event_id. Si un même identifiant porte plusieurs contenus distincts dans le dataset sélectionné, les lignes concernées reçoivent `conflicting_event_id`. Les autres rejeux sont dédupliqués, en conservant la première ligne selon timestamp Kafka, topic, partition et offset. Cet ordre de sélection est déterministe et ne définit pas un ordre métier global.
 
-Les contrôles n'imposent pas d'équation de solde et n'écartent pas les transactions étiquetées frauduleuses. Les deux tables Silver portent `bronze_version`.
+Les contrôles n'imposent pas d'équation de solde et n'écartent pas les transactions étiquetées frauduleuses. Les deux tables Silver portent `bronze_version` par ligne : version d’initialisation pour l’historique, puis version du commit CDF de l’événement. Plusieurs versions de provenance peuvent donc coexister dans une même version cohérente de Silver.
+
+### État incrémental et reprise
+
+L'initialisation active `delta.enableChangeDataFeed` sur Bronze (métadonnées uniquement). `_events`, une table Delta technique sous la sortie Silver, conserve les événements déjà lus avec leur provenance. À chaque exécution, les nouvelles lignes y sont fusionnées par topic/partition/offset ; les identités touchées sont reclassifiées avec leurs occurrences antérieures. Cela permet de détecter un conflit entre commits, de retirer l'ancienne transaction de Silver et de mettre toutes ses occurrences en quarantaine, comme le batch complet de référence.
+
+Les transactions sont fusionnées par `event_id`, la quarantaine par coordonnées Kafka. `_incremental.json` lie la progression au chemin, à l'identité Delta de Bronze, à la sortie et au dataset. La version en cours est enregistrée avant les écritures et le curseur n'avance qu'après les trois écritures Delta. Après une interruption, la même plage est rejouée avec des MERGE idempotents ; de nouvelles arrivées attendent l'exécution suivante. Un verrou local empêche deux mises à jour incrémentales simultanées.
+
+La première initialisation réconcilie aussi les anciennes tables Silver batch avec l'instantané Bronze complet, sans supprimer leur historique Delta. Sans nouvelle version Bronze, aucune table Silver n'est réécrite. Bronze doit rester append-only : les mises à jour/suppressions détectées dans le CDF sont refusées. Une plage CDF manquante ou expirée provoque une erreur, sans avancer le curseur.
+
+Les trois tables ne forment pas une transaction commune. Gold et l'étoile refusent une sortie marquée en cours ; ne pas exécuter les lecteurs et écritures en parallèle. Garder `_events`, les deux tables et `_incremental.json` ensemble. Les données intermédiaires incrémentales sont mises en cache sur disque. Ce traitement utilise huit partitions de shuffle, toujours sur deux threads et avec le heap de 768 Mio, et désactive les jointures broadcast automatiques pour borner la pression mémoire de l'initialisation. La table technique ajoute du stockage ; les MERGE et la recherche des identités touchées peuvent encore lire des fichiers historiques Silver. L'incrémental limite la relecture de Bronze, sans garantir un coût constant par exécution.
+
+Le batch complet reste disponible avec `--mode batch` vers une autre sortie, pour les comparaisons et reconstructions contrôlées. Il refuse de remplacer une destination possédant un état incrémental.
 
 ## Gold — indicateurs et publication
 
-Les tables d'agrégats lisent une version fixe de Silver. Elles comptent transactions, labels fraude et flags, et calculent montants, moyenne et taux de fraude par transaction. Les montants restent en Decimal. Le taux stocké est un ratio de 0 à 1 à huit décimales ; le terminal l'affiche en pourcentage.
+Les agrégats lisent une plage CDF Silver et une version précise de Silver. La première initialisation recalcule tout ; ensuite les insertions et post-images apportent une contribution positive, les suppressions et pré-images une contribution négative. Seuls les groupes touchés (type et heure) et le total global sont fusionnés. Moyenne et taux sont recalculés à partir des nouveaux compteurs et sommes, jamais additionnés entre eux. Un groupe devenu vide est supprimé ; le total global conserve une ligne à zéro avec moyenne et taux nuls.
 
-Les totaux par type et par step sont rapprochés du total global avant écriture. Une entrée Silver contenant des doublons, des valeurs invalides, plusieurs datasets ou plusieurs versions Bronze est refusée. Une entrée vide produit une ligne globale avec comptes/sommes à zéro, moyenne/taux à null ; les groupes absents ne sont pas créés.
+Les deltas monétaires sont explicitement ramenés en Decimal(30,2) avant addition aux totaux, afin de conserver les centimes dans les règles de précision Spark. Le taux reste un ratio Decimal(18,8) et la moyenne Decimal(24,6). Les flags sont indépendants des labels de fraude.
 
-Silver et les agrégats Gold remplacent chaque table atomiquement, mais ne forment pas une transaction commune entre tables. En cas d'échec partiel, relancer et vérifier les versions de provenance avant exploitation. Ne pas exécuter plusieurs constructions de la même couche en parallèle.
+`_gold_incremental.json` lie la progression à l'identité Delta et au chemin Silver. Avant les écritures, il enregistre la version Silver de fin et les versions de base des trois tables Gold. Les nouvelles valeurs absolues sont calculées depuis ces bases figées et matérialisées sur disque avant MERGE. Après une interruption, la même plage et les mêmes bases sont réutilisées : une écriture déjà réussie n'est pas additionnée une deuxième fois. Le curseur avance après les trois écritures. Un verrou local exclut deux exécutions Gold simultanées.
 
-L'étoile ajoute un manifeste local publié après les écritures. Son lecteur charge les versions Delta référencées, pour conserver un ensemble cohérent de faits et dimensions en cas d'interruption avant publication. Voir la [publication du modèle](star-schema.md#construction-et-lecture-cohérente).
+Les tables restent des transactions Delta distinctes. `banking.gold_incremental.read_tables` refuse une publication en cours et lit les trois versions publiées dans le marqueur ; le contrôle `replay_check.py` utilise ce lecteur. Ne pas lire directement les versions courantes pendant une mise à jour, ni lancer lecteurs et écritures en parallèle. Conserver les versions Gold référencées, en particulier les bases d'une reprise, ainsi que le CDF Silver non consommé. Une plage indisponible provoque une erreur sans avancer le curseur.
+
+La première initialisation active le CDF sur Silver par une modification de métadonnées et réconcilie les anciens agrégats batch. Sans nouvelle version Silver, aucune table Gold n'est réécrite. Les métadonnées par ligne (`silver_version`, `bronze_version`, `dataset_id`) décrivent la dernière mise à jour du groupe ; le marqueur donne la version Silver globale traitée et les versions exactes des trois tables. `bronze_version` est le maximum de provenance de l'instantané utilisé lors de cette mise à jour. Les groupes non touchés ne sont pas réécrits pour rafraîchir ces métadonnées.
+
+La validation de qualité et d'unicité scanne encore l'instantané Silver épinglé à chaque plage nouvelle. Les agrégats métier sont incrémentaux, mais le coût total n'est donc pas constant. Les données intermédiaires sont conservées sur disque, avec les limites Spark locales inchangées. Un batch complet de référence reste disponible avec `--mode batch` vers une sortie distincte ; il refuse une destination déjà gérée par l'état incrémental.
+
+L'étoile fusionne les faits touchés par le CDF Silver et ajoute les nouveaux membres des dimensions sans supprimer les anciens. Elle valide toujours l'instantané Silver, l'unicité des clés et les références sur l'ensemble de l'étoile. Elle ajoute un manifeste local publié après les écritures. Son lecteur charge les versions Delta référencées, pour conserver un ensemble cohérent de faits et dimensions en cas d'interruption avant publication. Voir la [publication du modèle](star-schema.md#construction-et-lecture-cohérente).
 
 ## Limites de la version locale
 
-La validation de bout en bout porte sur un petit échantillon, sans benchmark du dataset complet. Le broker unique et ses paramètres PLAINTEXT servent au développement local. Les snapshots Silver/Gold relisent leur entrée complète et nécessitent un dimensionnement avant montée en volume.
+La validation de bout en bout porte sur un petit échantillon, sans benchmark du dataset complet. Le broker unique et ses paramètres PLAINTEXT servent au développement local. Les validations Gold et étoile relisent encore leur entrée complète et nécessitent un dimensionnement avant montée en volume.
 
 La fraude est analysée à partir des labels simulés. Un lanceur local orchestre les étapes successives et vérifie le résultat du rejeu. La prédiction, la supervision continue, le déploiement distant et l'intégration AWS/Databricks restent des évolutions prévues.
 
-Références : [Spark et Kafka](https://spark.apache.org/docs/4.0.1/streaming/structured-streaming-kafka-integration.html), [streaming Delta](https://docs.delta.io/delta-streaming/), [lectures/écritures batch Delta](https://docs.delta.io/delta-batch/).
+Références : [Spark et Kafka](https://spark.apache.org/docs/4.0.1/streaming/structured-streaming-kafka-integration.html), [streaming Delta](https://docs.delta.io/delta-streaming/), [lectures/écritures batch Delta](https://docs.delta.io/delta-batch/), [Change Data Feed Delta](https://docs.delta.io/delta-change-data-feed/).

@@ -8,21 +8,21 @@
 | --- | --- |
 | Ingestion | Kafka KRaft local, topic partitionné, producer CSV à débit limité, consumer avec confirmation manuelle |
 | Bronze | Structured Streaming, conservation brute, checkpoint durable et reprise des offsets |
-| Silver | Decimal, qualité, quarantaine, conflits d'identité et déduplication métier |
-| Gold | Agrégats descriptifs rapprochés du CSV, par type et heure simulée |
-| Modèle dimensionnel | Fait transaction, trois dimensions, deux rôles compte, clés stables et manifeste de versions |
+| Silver | CDF incrémental, MERGE, reprise, Decimal, quarantaine et conflits d'identité inter-versions |
+| Gold | Agrégats incrémentaux CDF, contributions signées, reprise sans double comptage et rapprochement CSV |
+| Modèle dimensionnel | Faits incrémentaux, trois dimensions conservées, deux rôles compte, clés stables, reprise et manifeste de versions |
 | Orchestration locale | Lanceur complet avec vérification CSV, arrêt sur erreur, nettoyage Kafka, verrou et journaux chronométrés |
 | Exploration | Requêtes Spark SQL sur un instantané cohérent de l'étoile |
-| Validation | Tests unitaires en GitHub Actions ; intégration locale de reprise, qualité, précision et jointures |
+| Validation | Tests unitaires et scénario incrémental synthétique en GitHub Actions ; tests locaux approfondis de reprise, qualité, précision et jointures |
 
-Le périmètre validé de bout en bout comprend les préfixes de 100, 10 000 et 250 000 transactions. Silver, Gold et les dimensions sont construits en batch complet. Le dépôt fournit une plateforme locale de préparation et d'analyse des données ; la prédiction de fraude est une évolution distincte.
+Le périmètre validé de bout en bout comprend les préfixes de 100, 10 000 et 250 000 transactions. Silver, Gold et le modèle dimensionnel sont incrémentaux après initialisation complète. Le dépôt fournit une plateforme locale de préparation et d'analyse des données ; la prédiction de fraude est une évolution distincte.
 
 ## Prochaines étapes locales
 
 - Élargir progressivement l'échantillon pour couvrir plusieurs heures et mesurer RAM, disque et temps de traitement.
 - Tester une interruption pendant une écriture Bronze et une perte d'offsets liée à la rétention Kafka.
-- Introduire une stratégie incrémentale Silver/Gold avant montée en volume.
-- Étendre la CI aux tests d'intégration sur fixtures.
+- Mesurer et optimiser les scans de validation et les MERGE avant le dataset complet.
+- Étendre la CI aux scénarios d'interruption et à Kafka lorsque le temps et les ressources d'exécution le permettent.
 - Ajouter une restitution BI du modèle dimensionnel.
 - Évaluer une approche de détection de fraude avec séparation entraînement/évaluation et prévention des fuites de labels.
 

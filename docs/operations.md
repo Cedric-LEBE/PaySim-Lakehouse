@@ -19,7 +19,7 @@ Les dépendances Python sont dans `requirements.txt` et `requirements-streaming.
 
 ## Ressources et stockage
 
-Kafka est limité à 1 Gio de mémoire et 1,5 CPU par Compose, avec un heap Java de 256 à 512 Mio. Les outils Kafka exécutés dans le conteneur utilisent un heap maximal de 128 Mio. Spark s'exécute sur l'hôte avec deux threads et un heap driver de 768 Mio ; son utilisation mémoire totale dépasse le seul heap. La limite Docker ne couvre pas Spark.
+Kafka est limité à 1 Gio de mémoire et 1,5 CPU par Compose, avec un heap Java de 256 à 512 Mio. Les outils Kafka exécutés dans le conteneur utilisent un heap maximal de 128 Mio. Spark s'exécute sur l'hôte avec deux threads et un heap driver de 768 Mio ; son utilisation mémoire totale dépasse le seul heap. Silver incrémental répartit les shuffles en huit partitions et utilise des caches sur disque ; cela ne change pas les deux threads ni le heap de 768 Mio. La limite Docker ne couvre pas Spark.
 
 Lancer les étapes Spark successivement. Kafka peut être arrêté après l'ingestion Bronze, pendant les traitements Silver/Gold et les tests qui n'en dépendent pas. Les paramètres sont définis dans `infrastructure/kafka/docker-compose.yml` et `scripts/bronze.sh`.
 
@@ -87,14 +87,68 @@ Tous les lanceurs Spark réutilisent `scripts/bronze.sh`. Les chemins ci-dessous
 | Lanceur | Principales options |
 | --- | --- |
 | `scripts/bronze.sh` | `--bootstrap-servers`, `--topic`, `--output`, `--checkpoint`, `--max-offsets` |
-| `scripts/silver.sh` | `--source`, `--output`, `--dataset-id` |
-| `scripts/gold.sh` | `--source`, `--output` |
-| `scripts/star.sh` | `--source`, `--output` |
+| `scripts/silver.sh` | `--source`, `--output`, `--dataset-id`, `--mode incremental|batch` |
+| `scripts/gold.sh` | `--source`, `--output`, `--mode incremental|batch` |
+| `scripts/star.sh` | `--source`, `--output`, `--mode incremental|batch` |
 | `scripts/explore.sh` | `--star`, `--sql` |
 
-Les traitements Bronze, Silver, Gold et étoile ont chacun leur destination par défaut ; l'explorateur lit l'étoile publiée. Consulter `--help` pour les valeurs des paramètres. Modifier une destination ou un périmètre de dataset doit rester une décision explicite : Silver/Gold reconstruisent leurs tables en remplacement.
+Les traitements Bronze, Silver, Gold et étoile ont chacun leur destination par défaut ; l'explorateur lit l'étoile publiée. Consulter `--help` pour les valeurs des paramètres. Modifier une destination ou un périmètre de dataset doit rester une décision explicite : Silver fusionne les nouvelles données par défaut ; Gold met à jour ses agrégats depuis le CDF Silver ; l’étoile fusionne les faits concernés et ajoute les nouveaux membres de dimensions.
 
 Les versions de tables lues sont figées pendant chaque traitement. Ne pas lancer deux reconstructions simultanées d'une même couche. Pour l'étoile, utiliser les vues chargées par `scripts/explore.sh`, qui respectent le manifeste des versions publiées.
+
+## Silver incrémental
+
+```bash
+bash scripts/silver.sh
+```
+
+Au premier lancement, le CDF est activé sur Bronze et tout l'historique est initialisé une fois. Les lancements suivants lisent seulement les nouveaux commits. Aucune nouvelle publication Kafka n'est nécessaire pour migrer les données existantes. Le lanceur `pipeline.sh` utilise ce mode automatiquement.
+
+Conserver `data/silver/_incremental.json`, `data/silver/_events`, `transactions` et `quarantine` ensemble. Ne pas modifier le curseur, supprimer une seule de ces destinations ou utiliser un VACUUM qui effacerait des versions CDF encore nécessaires. Une erreur de source, de dataset, de rétention ou une modification/suppression Bronze doit être examinée ; ne pas la contourner en réinitialisant le marqueur. Ne pas changer les propriétés CDF pendant l'exécution.
+
+Une sortie avec `pending_version` nécessite une reprise Silver avant Gold/étoile. Relancer la même commande ; le curseur reste sur la dernière version entièrement traitée. En cas d'arrivée de nouvelles données pendant cette reprise, relancer ensuite Silver une seconde fois pour les traiter.
+
+Pour produire un batch complet de référence, utiliser une sortie distincte :
+
+```bash
+bash scripts/silver.sh --mode batch --output data/silver-reference
+```
+
+## Gold incrémental
+
+```bash
+bash scripts/gold.sh
+```
+
+Le premier lancement initialise les trois agrégats et active le CDF Silver sans changer les transactions. Les suivants prennent en compte les ajouts, corrections et retraits. La commande est déjà utilisée par `pipeline.sh`. Une relance sans changement affiche `status: no_change`.
+
+Conserver `data/gold/_gold_incremental.json` avec `summary`, `by_type` et `by_step`. Ne pas modifier le marqueur, écrire dans ces tables en dehors du lanceur, ni supprimer les versions de base d'une reprise avec VACUUM. Si `pending` est présent, relancer la même commande : les arrivées Silver postérieures à cette plage seront traitées par l'exécution suivante. Une erreur de qualité, de source ou de rétention nécessite un diagnostic ; ne pas avancer le curseur manuellement. Une reconstruction contrôlée peut être produite dans une autre destination.
+
+Pour des lectures cohérentes, utiliser `banking.gold_incremental.read_tables(spark, 'data/gold')`, qui refuse une publication en cours et épingle les trois versions publiées. Le schéma en étoile continue de lire Silver et utilise son propre manifeste.
+
+```bash
+bash scripts/gold.sh --mode batch --output data/gold-reference
+```
+
+## Étoile incrémentale
+
+```bash
+bash scripts/star.sh
+```
+
+Le premier lancement initialise l'état incrémental sur tout Silver et réconcilie les faits existants. Les dimensions déjà présentes sont conservées ; les versions suivantes du CDF ajoutent les membres observés et mettent à jour ou retirent les faits concernés. La commande reste intégrée à `pipeline.sh`. Une relance sans nouvelle version Silver ne réécrit aucune table ni le manifeste.
+
+Conserver `data/gold/star/_star_incremental.json`, `_snapshot.json` et les quatre tables ensemble. Le curseur identifie le chemin et l'identité Delta de Silver. Une plage en cours est enregistrée avant les écritures ; elle est reprise à l'identique en cas d'interruption. Les nouvelles arrivées Silver attendent l'exécution suivante. Ne pas modifier le curseur, écrire directement dans les tables ou supprimer des versions encore nécessaires au CDF ou au manifeste avec VACUUM.
+
+Le manifeste reste la référence de lecture : utiliser `scripts/explore.sh` ou `banking.star.register_views`. Tant qu'une nouvelle publication n'a pas réussi, l'ancien ensemble complet reste lisible. Une interruption après publication mais avant confirmation du curseur rejoue la même plage sans dupliquer les membres ni les faits. Les lectures directes des versions courantes pendant les MERGE peuvent voir un état intermédiaire ; elles ne sont pas prises en charge. Ne pas lancer deux traitements ou des modifications externes en parallèle.
+
+Une suppression de fait ne supprime pas les comptes, types et heures historiques. Leurs effectifs peuvent dépasser ceux d'un recalcul complet sur les seuls faits courants. La validation continue de vérifier toutes les clés et références ; son coût reste proportionnel au volume existant. Le traitement conserve les limites Spark locales et utilise des caches sur disque.
+
+Pour une reconstruction complète de comparaison, utiliser une destination distincte :
+
+```bash
+bash scripts/star.sh --mode batch --output data/star-reference
+```
 
 ## Dépannage
 

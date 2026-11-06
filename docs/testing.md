@@ -42,12 +42,20 @@ Ces tests s'exécutent successivement ; Kafka peut rester arrêté.
 
 | Test | Prérequis | Périmètre |
 | --- | --- | --- |
+| `pipeline_check.py` | Fixture synthétique du dépôt uniquement | Bronze → Silver → Gold → étoile, 2→3→2 faits, relance sans écriture, rejeu métier, conflit retiré, parité avec le batch et quatre références ; exécuté en CI |
+| `silver_incremental_check.py` | Fixture fournie dans le dépôt | CDF, relance sans écriture, conflits entre commits, parité batch, interruption entre MERGE et avant curseur, arrivées pendant reprise, lecteurs bloqués et rejet des suppressions Bronze |
 | `silver_check.py` | Fixture fournie dans le dépôt | Typage, notation scientifique exacte, rejet des sous-centimes et débordements, précision sans arrondi, quarantaine, conflit d'identité, déduplication et reconstructions 1→1→2 |
+| `gold_incremental_check.py` | Fixtures créées dans le test | Parité de tous les indicateurs avec le batch complet, précision des centimes, insertions, corrections, retraits, groupes disparus, cas vide, relance sans écriture, interruption entre MERGE et arrivées pendant reprise |
 | `gold_check.py` | CSV vérifié et Silver contenant exactement les 100 premières transactions PaySim | Rapprochement des agrégats avec le CSV, relance stable, cas vide/sans fraude, distinction flag/label, rejet des doublons |
+| `star_incremental_check.py` | Fixtures créées dans le test | Parité des faits avec le batch, inclusion des dimensions courantes, conservation des dimensions historiques et clés, corrections, retraits, vide, relance sans écriture et ancien manifeste lisible pendant reprise |
 | `star_check.py` | Silver contenant exactement les 100 premières transactions PaySim | Grain, reconstitution par jointures, totaux SQL, clés stables, deux rôles du compte, références et interruption de publication |
 
 ```bash
+BANKING_SPARK_APP=tests/integration/pipeline_check.py bash scripts/bronze.sh
 BANKING_SPARK_APP=tests/integration/silver_check.py bash scripts/bronze.sh
+BANKING_SPARK_APP=tests/integration/silver_incremental_check.py bash scripts/bronze.sh
+BANKING_SPARK_APP=tests/integration/gold_incremental_check.py bash scripts/bronze.sh
+BANKING_SPARK_APP=tests/integration/star_incremental_check.py bash scripts/bronze.sh
 BANKING_SPARK_APP=tests/integration/gold_check.py bash scripts/bronze.sh
 BANKING_SPARK_APP=tests/integration/star_check.py bash scripts/bronze.sh
 ```
@@ -83,7 +91,7 @@ BANKING_SPARK_APP=tests/integration/replay_check.py bash scripts/bronze.sh --max
 
 Exécuter les étapes successivement et s'arrêter en cas d'échec. Conserver la table Bronze et son checkpoint existants. Le producer repart du début ; Silver doit conserver exactement 10 000 identités distinctes. Les comptes Bronze, doublons et quarantaine dépendent des publications antérieures.
 
-Le contrôle compare chaque champ métier Silver au CSV, rapproche les agrégats globaux/par type/par étape et vérifie les identités et totaux des faits ainsi que les effectifs des dimensions publiées. Il lit les tables sans les modifier. Son paramètre `--max-messages` permet de choisir un autre préfixe du CSV. Le CSV est lu ligne par ligne et les transactions Silver sont transférées vers Python une partition à la fois après tri par ligne source. Les agrégats et les identifiants de comptes distincts restent en mémoire ; toutes les transactions ne sont plus collectées simultanément.
+Le contrôle compare chaque champ métier Silver au CSV, rapproche les agrégats globaux/par type/par étape et vérifie les identités et totaux des faits ainsi que les effectifs des dimensions publiées. Les membres attendus du CSV doivent être présents ; des membres historiques supplémentaires sont autorisés dans les dimensions incrémentales. Il lit les tables sans les modifier. Son paramètre `--max-messages` permet de choisir un autre préfixe du CSV. Le CSV est lu ligne par ligne et les transactions Silver sont transférées vers Python une partition à la fois après tri par ligne source. Les agrégats et les identifiants de comptes distincts restent en mémoire ; toutes les transactions ne sont plus collectées simultanément.
 
 Résultats attendus : 10 000 transactions, montant total 1 035 466 899,49, 68 fraudes (0,68 %) et montant frauduleux 36 275 527,43. L'étoile contient 10 000 faits, 5 types, 7 heures relatives et 16 397 comptes. Les tests `gold_check.py` et `star_check.py` ci-dessus restent dédiés au préfixe de 100 lignes ; utiliser `replay_check.py` pour ce périmètre élargi.
 
@@ -121,20 +129,23 @@ Les journaux, `report.json` et les mesures ponctuelles `resources.json` de cette
 - Relancer Silver et Gold sans changement d'entrée conserve les lignes métier et les indicateurs, tout en créant de nouvelles versions Delta.
 - Le test étoile simule une interruption avant publication du manifeste et vérifie que les versions précédemment publiées restent lisibles.
 
-L'interruption pendant une écriture Bronze, la perte de rétention Kafka et un benchmark du dataset complet restent à tester. Les tests d'intégration de ce document s'exécutent localement ; la CI couvre actuellement les tests unitaires.
+L'interruption pendant une écriture Bronze, la perte de rétention Kafka et un benchmark du dataset complet restent à tester. Tous ces tests peuvent s'exécuter localement ; la CI exécute les tests unitaires et `pipeline_check.py`. Les scénarios détaillés d'interruption et les tests Kafka restent locaux.
 
 ## GitHub Actions
 
-Le workflow [CI](../.github/workflows/ci.yml) se déclenche à chaque push, à chaque ouverture ou mise à jour d'une pull request, et manuellement via `workflow_dispatch`. Sur Ubuntu 24.04 avec Python 3.13, il installe uniquement `requirements.txt`, vérifie les dépendances puis exécute :
+Le workflow [CI](../.github/workflows/ci.yml) se déclenche à chaque push, à chaque ouverture ou mise à jour d'une pull request, et manuellement via `workflow_dispatch`. Les deux jobs utilisent Ubuntu 24.04 et Python 3.13, avec lecture seule du dépôt et actions figées par SHA.
+
+1. **Unit tests (Python 3.13)** installe `requirements.txt`, vérifie les dépendances et exécute les dix tests unitaires sans Spark ni Kafka. Ce job est limité à cinq minutes.
+2. **Incremental pipeline (Spark / Delta)** attend la réussite du premier job, configure Java 17 Temurin, crée `.venv` et installe `requirements-streaming.txt`. Il est limité à quinze minutes et exécute :
 
 ```bash
-PYTHONPATH=src python -m unittest discover -s tests -p 'test_*.py' -v
+BANKING_SPARK_APP=tests/integration/pipeline_check.py bash scripts/bronze.sh
 ```
 
-Les tests utilisent la fixture du dépôt et des mocks. Ils ne nécessitent ni service Kafka, ni Spark, ni CSV Kaggle et ne traitent pas le dataset complet. Les tests d'intégration restent une étape distincte.
+Le scénario utilise les deux lignes synthétiques du dépôt et deux événements supplémentaires construits par le test. Il crée les lignes Bronze via le même `bronze_frame` que l'ingestion, sans connecter de broker. Il vérifie les totaux attendus à chaque phase (2→3→2 faits), la parité avec des reconstructions complètes Gold/étoile, les quatre références aux dimensions et la conservation des dimensions historiques. Une relance inchangée doit laisser les versions de toutes les tables et le manifeste identiques. Un rejeu métier doit être dédupliqué ; un conflit doit retirer la transaction de Silver, des agrégats Gold et des faits, et placer ses deux occurrences en quarantaine.
 
-Le job est limité à cinq minutes. Les téléchargements pip sont mis en cache à partir de requirements.txt ; les exécutions précédentes du même workflow et de la même référence sont annulées si une nouvelle arrive. Le workflow demande seulement la lecture du dépôt ; aucun secret supplémentaire ni accès cloud n'est configuré. Les versions des actions sont figées par SHA, avec leur tag indiqué en commentaire.
+Aucun service Docker, dataset Kaggle ou secret cloud n'est utilisé. Spark et les dépendances Maven sont téléchargés si nécessaire ; le lanceur conserve ses limites locales de deux threads et 768 Mio de heap. Les seules dépendances mises en cache par le workflow sont celles de pip ; le cache Ivy reste propre à l'exécution GitHub. Les sorties isolées sous `data/integration/` restent hors Git. Les journaux de l'étape sont consultables dans Actions.
 
-Après avoir poussé le fichier du workflow, ouvrir **Actions → CI → Unit tests (Python 3.13)** pour consulter le résultat et le détail des dix tests actuels. Une coche verte valide ce périmètre de tests ; elle ne constitue pas une validation du rejeu intégral PaySim. Le bouton **Run workflow** devient disponible lorsque le workflow est présent sur la branche par défaut.
+La concurrence annule une exécution ancienne de la même référence lorsqu'une nouvelle arrive. Aucun déploiement n'est effectué. Après push, ouvrir **Actions → CI** et vérifier que les deux jobs sont verts. Un succès de ce scénario valide le parcours Delta synthétique ; il ne valide ni la connectivité Kafka, ni les interruptions couvertes par les autres tests locaux, ni le rejeu du dataset complet.
 
-Référence : [construire et tester un projet Python avec GitHub Actions](https://docs.github.com/en/actions/tutorials/build-and-test-code/python).
+Références : [construire et tester Python avec GitHub Actions](https://docs.github.com/en/actions/tutorials/build-and-test-code/python), [configuration de Java avec setup-java](https://github.com/actions/setup-java).

@@ -24,7 +24,7 @@ flowchart LR
 - **Modèle dimensionnel** : une table de faits transaction, trois dimensions et deux rôles pour la dimension compte.
 - **Validation** : tests unitaires et tests d'intégration de reprise, de qualité, de rapprochement avec le CSV et d'intégrité des jointures.
 
-Le broker tourne dans Docker ; Python et Spark tournent sur l'hôte. Bronze traite les événements disponibles puis s'arrête (`availableNow`). Silver, Gold et l'étoile sont reconstruits en batch depuis des versions Delta fixes.
+Le broker tourne dans Docker ; Python et Spark tournent sur l'hôte. Bronze traite les événements disponibles puis s'arrête (`availableNow`). Silver, les agrégats Gold et l'étoile sont incrémentaux après leur initialisation complète.
 
 ## Prérequis
 
@@ -92,6 +92,8 @@ Le lanceur vérifie l'empreinte du CSV et le préfixe demandé, démarre Kafka, 
 
 Les journaux et durées sont conservés dans `data/runs/<exécution>/`, avec un bilan `report.json`. Le lanceur conserve les tables et checkpoints existants ; un rejeu augmente Bronze mais reste dédupliqué dans Silver. Il prend en charge macOS et Linux. Voir [l'exploitation du lanceur](docs/operations.md#pipeline-complet).
 
+Silver utilise désormais un traitement incrémental : première initialisation complète, puis lecture des seuls nouveaux commits Bronze et MERGE Delta. Les tables et l'état de progression doivent être conservés ensemble. Les agrégats Gold et l'étoile sont également mis à jour depuis le CDF Silver. Les dimensions conservent leurs membres historiques et les faits suivent les ajouts, corrections et retraits Silver. Voir [Silver incrémental](docs/operations.md#silver-incrémental).
+
 ## Résultats de référence
 
 Sur un environnement neuf, avec les **100 premières transactions** du CSV vérifié :
@@ -119,7 +121,7 @@ Les tests unitaires ne nécessitent ni Kafka ni Spark :
 PYTHONPATH=src .venv/bin/python -m unittest discover -s tests -v
 ```
 
-Le workflow [GitHub Actions CI](.github/workflows/ci.yml) exécute les tests unitaires sur Ubuntu avec Python 3.13 à chaque push et pull request. Il peut aussi être lancé manuellement depuis l'onglet Actions. Son périmètre est indépendant de Kafka, Spark et du CSV complet.
+Le workflow [GitHub Actions CI](.github/workflows/ci.yml) exécute les dix tests unitaires, puis un scénario d'intégration synthétique Bronze → Silver → Gold → étoile, sur Ubuntu avec Python 3.13 et Java 17. Il se déclenche sur push, pull request et lancement manuel. Le scénario vérifie les rejeux et le retrait d'une transaction en conflit sans Kafka, Docker, CSV Kaggle ni secrets cloud.
 
 La [documentation des tests](docs/testing.md) donne les commandes d'intégration, leurs prérequis et les données utilisées. Certains tests attendent précisément l'échantillon de 100 transactions ci-dessus.
 

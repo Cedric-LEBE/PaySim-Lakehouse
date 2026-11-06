@@ -48,6 +48,26 @@ def frames(source):
             'dim_account': accounts, 'fact_transaction': fact}
 
 
+def validate(silver, unique=True):
+    from pyspark.sql import functions as F
+    from pyspark.sql.types import DecimalType
+    if any(silver.schema[name].dataType != DecimalType(20, 2) for name in MONEY):
+        raise ValueError('Montants Silver attendus en Decimal(20,2)')
+    valid = (F.col('event_id').isNotNull() & (F.length(F.trim('dataset_id')) > 0) & (F.col('source_row') >= 1)
+             & F.col('bronze_version').isNotNull() & (F.col('step') >= 1)
+             & F.col('type').isin('PAYMENT', 'TRANSFER', 'CASH_OUT', 'CASH_IN', 'DEBIT')
+             & (F.length(F.trim('nameOrig')) > 0) & (F.length(F.trim('nameDest')) > 0)
+             & F.col('isFraud').isin(0, 1) & F.col('isFlaggedFraud').isin(0, 1))
+    for name in MONEY:
+        valid = valid & (F.col(name) >= 0)
+    check = silver.agg(F.count('*').alias('rows'), F.countDistinct('event_id').alias('ids'),
+                       F.countDistinct('dataset_id').alias('datasets'),
+                       F.count(F.when(~F.coalesce(valid, F.lit(False)), True)).alias('invalid')).first()
+    if check.invalid or (unique and check.rows != check.ids) or check.datasets > 1:
+        raise ValueError('Silver invalide : doublons, valeurs invalides ou snapshots mélangés')
+    return check
+
+
 def build(spark, source, output):
     from delta.tables import DeltaTable
     from pyspark.sql import functions as F
@@ -57,24 +77,14 @@ def build(spark, source, output):
         raise ValueError('Silver et étoile doivent être distinctes sans imbrication')
     if not (source / '_delta_log').exists():
         raise ValueError('Table Silver absente')
+    from banking.silver_incremental import ensure_published
+    ensure_published(source)
+    if (output / '_star_incremental.json').exists():
+        raise ValueError('Destination étoile incrémentale : choisir une sortie batch distincte')
     version = DeltaTable.forPath(spark, str(source)).history(1).select('version').first()[0]
     silver = spark.read.format('delta').option('versionAsOf', version).load(str(source)).persist()
     try:
-        if any(silver.schema[name].dataType != DecimalType(20, 2) for name in MONEY):
-            raise ValueError('Montants Silver attendus en Decimal(20,2)')
-        valid = ((F.length(F.trim('dataset_id')) > 0) & (F.col('source_row') >= 1)
-                 & F.col('bronze_version').isNotNull() & (F.col('step') >= 1)
-                 & F.col('type').isin('PAYMENT', 'TRANSFER', 'CASH_OUT', 'CASH_IN', 'DEBIT')
-                 & (F.length(F.trim('nameOrig')) > 0) & (F.length(F.trim('nameDest')) > 0)
-                 & F.col('isFraud').isin(0, 1) & F.col('isFlaggedFraud').isin(0, 1))
-        for name in MONEY:
-            valid = valid & (F.col(name) >= 0)
-        check = silver.agg(F.count('*').alias('rows'), F.countDistinct('event_id').alias('ids'),
-                           F.countDistinct('dataset_id').alias('datasets'),
-                           F.countDistinct('bronze_version').alias('bronze_versions'),
-                           F.count(F.when(~F.coalesce(valid, F.lit(False)), True)).alias('invalid')).first()
-        if check.invalid or check.rows != check.ids or check.datasets > 1 or check.bronze_versions > 1:
-            raise ValueError('Silver invalide : doublons, valeurs invalides ou snapshots mélangés')
+        check = validate(silver)
         tables = frames(silver)
         counts = {}
         for name, table in tables.items():
@@ -125,11 +135,16 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source', default='data/silver/transactions')
     parser.add_argument('--output', default='data/gold/star')
+    parser.add_argument('--mode', choices=['incremental', 'batch'], default='incremental')
     args = parser.parse_args()
     spark = session()
     spark.sparkContext.setLogLevel('WARN')
     try:
-        build(spark, args.source, args.output)
+        if args.mode == 'incremental':
+            from banking.star_incremental import build as incremental
+            incremental(spark, args.source, args.output)
+        else:
+            build(spark, args.source, args.output)
     finally:
         spark.stop()
 

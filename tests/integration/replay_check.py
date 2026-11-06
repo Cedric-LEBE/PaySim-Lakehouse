@@ -8,6 +8,7 @@ from banking.bronze import session
 from banking.producer import records
 from banking.silver import DATASET, MONEY, FIELDS
 from banking.star import register_views
+from banking.gold_incremental import read_tables
 from pyspark.sql import functions as F
 
 parser = argparse.ArgumentParser(description=__doc__)
@@ -50,8 +51,9 @@ try:
             if transaction['isFraud']:
                 totals['fraud_amount'] += Decimal(transaction['amount'])
     assert count == args.max_messages, 'CSV plus court que le périmètre demandé'
+    gold_tables = read_tables(spark, 'data/gold')
     for table, key in [('summary', None), ('by_type', 'type'), ('by_step', 'step')]:
-        output = spark.read.format('delta').load('data/gold/' + table).collect()
+        output = gold_tables[table].collect()
         assert len(output) == len(groups[table])
         for row in output:
             group = row[key] if key else None
@@ -68,9 +70,17 @@ try:
     expected_counts = {'dim_transaction_type': len(groups['by_type']),
                        'dim_simulation_time': len(groups['by_step']),
                        'dim_account': len(accounts), 'fact_transaction': count}
-    assert manifest['counts'] == expected_counts
+    assert manifest['counts']['fact_transaction'] == count
     for table, expected_count in expected_counts.items():
-        assert spark.table(table).count() == expected_count, table
+        actual_count = spark.table(table).count()
+        assert actual_count == manifest['counts'][table], table
+        assert actual_count >= expected_count, table
+    # Retained historical dimension members may outnumber the current CSV prefix.
+    for row in spark.table('dim_account').filter(F.col('dataset_id') == DATASET).select('account_id').toLocalIterator():
+        accounts.discard(row.account_id)
+    assert not accounts, 'Comptes attendus absents de la dimension'
+    assert set(groups['by_type']).issubset({r.transaction_type for r in spark.table('dim_transaction_type').select('transaction_type').collect()})
+    assert set(groups['by_step']).issubset({r.simulation_step for r in spark.table('dim_simulation_time').filter(F.col('dataset_id') == DATASET).select('simulation_step').collect()})
     print(f'PASS: {count} événements Silver comparés champ par champ au CSV ; agrégats Gold globaux/type/step et faits étoile rapprochés.', flush=True)
 finally:
     spark.stop()

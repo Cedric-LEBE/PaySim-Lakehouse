@@ -1,4 +1,4 @@
-"""Build a validated Silver snapshot from a fixed Bronze Delta version."""
+"""Silver quality rules, batch reference and incremental command entry point."""
 import argparse
 from pathlib import Path
 from banking.bronze import session
@@ -69,6 +69,8 @@ def build(spark, source, output, dataset=DATASET):
     source, output = Path(source).resolve(), Path(output).resolve()
     if source == output or source in output.parents or output in source.parents:
         raise ValueError('Bronze et Silver doivent être dans des dossiers distincts sans imbrication')
+    if (output / '_incremental.json').exists():
+        raise ValueError('Destination incrémentale : choisir une autre sortie pour le batch complet')
     if not (source / '_delta_log').exists():
         raise ValueError('Table Bronze Delta absente')
     version = DeltaTable.forPath(spark, str(source)).history(1).select('version').first()[0]
@@ -102,13 +104,18 @@ def main():
     parser.add_argument('--source', default='data/bronze/transactions')
     parser.add_argument('--output', default='data/silver')
     parser.add_argument('--dataset-id', default=DATASET)
+    parser.add_argument('--mode', choices=['incremental', 'batch'], default='incremental')
     args = parser.parse_args()
     if not args.dataset_id.strip():
         parser.error('dataset-id non vide requis')
     spark = session()
     spark.sparkContext.setLogLevel('WARN')
     try:
-        build(spark, args.source, args.output, args.dataset_id)
+        if args.mode == 'incremental':
+            from banking.silver_incremental import build as incremental
+            incremental(spark, args.source, args.output, args.dataset_id)
+        else:
+            build(spark, args.source, args.output, args.dataset_id)
     finally:
         spark.stop()
 
