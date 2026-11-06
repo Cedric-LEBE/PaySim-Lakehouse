@@ -92,6 +92,6 @@ L'étoile ajoute un manifeste local publié après les écritures. Son lecteur c
 
 La validation de bout en bout porte sur un petit échantillon, sans benchmark du dataset complet. Le broker unique et ses paramètres PLAINTEXT servent au développement local. Les snapshots Silver/Gold relisent leur entrée complète et nécessitent un dimensionnement avant montée en volume.
 
-La fraude est analysée à partir des labels simulés. La prédiction, la supervision continue, l'orchestration, le déploiement distant et l'intégration AWS/Databricks restent des évolutions prévues.
+La fraude est analysée à partir des labels simulés. Un lanceur local orchestre les étapes successives et vérifie le résultat du rejeu. La prédiction, la supervision continue, le déploiement distant et l'intégration AWS/Databricks restent des évolutions prévues.
 
 Références : [Spark et Kafka](https://spark.apache.org/docs/4.0.1/streaming/structured-streaming-kafka-integration.html), [streaming Delta](https://docs.delta.io/delta-streaming/), [lectures/écritures batch Delta](https://docs.delta.io/delta-batch/).

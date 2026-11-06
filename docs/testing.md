@@ -10,7 +10,7 @@ Exécuter les commandes depuis la racine du dépôt, après installation des dé
 PYTHONPATH=src .venv/bin/python -m unittest discover -s tests -v
 ```
 
-Ces tests couvrent la précision et l'identité des événements producer, la validation consumer et l'absence de confirmation d'offset lorsque le message, sa clé ou sa sortie sont en échec. Kafka, Spark et le CSV Kaggle ne sont pas requis.
+Les dix tests couvrent également l’ordre des étapes du lanceur, le blocage après échec, le nettoyage Kafka et le refus d’un CSV incorrect avant publication. Ils couvrent la précision et l'identité des événements producer, la validation consumer et l'absence de confirmation d'offset lorsque le message, sa clé ou sa sortie sont en échec. Kafka, Spark et le CSV Kaggle ne sont pas requis.
 
 ## Tests Kafka
 
@@ -107,6 +107,6 @@ Les tests utilisent la fixture du dépôt et des mocks. Ils ne nécessitent ni s
 
 Le job est limité à cinq minutes. Les téléchargements pip sont mis en cache à partir de requirements.txt ; les exécutions précédentes du même workflow et de la même référence sont annulées si une nouvelle arrive. Le workflow demande seulement la lecture du dépôt ; aucun secret supplémentaire ni accès cloud n'est configuré. Les versions des actions sont figées par SHA, avec leur tag indiqué en commentaire.
 
-Après avoir poussé le fichier du workflow, ouvrir **Actions → CI → Unit tests (Python 3.13)** pour consulter le résultat et le détail des six tests actuels. Une coche verte valide ce périmètre de tests ; elle ne constitue pas une validation du rejeu intégral PaySim. Le bouton **Run workflow** devient disponible lorsque le workflow est présent sur la branche par défaut.
+Après avoir poussé le fichier du workflow, ouvrir **Actions → CI → Unit tests (Python 3.13)** pour consulter le résultat et le détail des dix tests actuels. Une coche verte valide ce périmètre de tests ; elle ne constitue pas une validation du rejeu intégral PaySim. Le bouton **Run workflow** devient disponible lorsque le workflow est présent sur la branche par défaut.
 
 Référence : [construire et tester un projet Python avec GitHub Actions](https://docs.github.com/en/actions/tutorials/build-and-test-code/python).

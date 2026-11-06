@@ -66,6 +66,20 @@ PYTHONPATH=src .venv/bin/python -m banking.consumer \
 
 Le consumer s'arrête à la limite ou après 20 secondes sans nouveau message, une fois les partitions attribuées. Le même group-id reprend après les offsets confirmés. Un nouveau group-id commence aux plus anciens événements encore disponibles. Un résultat de zéro événement peut donc être normal pour un groupe ayant tout lu. Une erreur de validation bloque la confirmation du message concerné.
 
+## Pipeline complet
+
+```bash
+bash scripts/pipeline.sh --max-messages 10000 --rate 100 --max-offsets 1000
+```
+
+Le lanceur utilise le CSV PaySim version 2 et son dataset ID de référence. `--csv` accepte un autre chemin vers ce même fichier vérifié. Les valeurs numériques doivent être positives et finies. Le préfixe doit exister intégralement dans le CSV. Un volume inférieur au nombre de faits de l'étoile déjà publiée est refusé : les couches locales conservent les données précédentes.
+
+Les commandes sont exécutées successivement, avec arrêt au premier échec. Kafka est arrêté après Bronze et lors d'un échec ou d'une interruption contrôlée après son démarrage. Le lanceur arrête aussi un broker déjà actif : ne pas l'utiliser si un autre travail dépend du même Kafka. Un arrêt brutal de la machine ou du processus ne permet pas de garantir ce nettoyage ; vérifier alors `bash scripts/kafka.sh status`.
+
+Un verrou empêche deux exécutions simultanées du lanceur sur macOS/Linux. Il ne bloque pas les commandes individuelles : ne pas lancer les étapes manuellement en parallèle. Aucune table ni aucun checkpoint ne sont supprimés. Ne pas changer le volume vers le bas pour tenter de réduire une table existante.
+
+Chaque exécution conserve sous `data/runs/` un dossier avec un journal par commande et `report.json` : paramètres, état final, erreur éventuelle, durées et codes de sortie. Un code de sortie non nul signale l'échec. Consulter le bilan et le journal de l'étape concernée avant de relancer la même commande. Des événements peuvent déjà avoir été publiés lors d'un échec ; Silver déduplique le rejeu avec le même dataset ID. Les durées sont des temps écoulés, pas une mesure de mémoire ou un benchmark du dataset complet.
+
 ## Traitements et options
 
 Tous les lanceurs Spark réutilisent `scripts/bronze.sh`. Les chemins ci-dessous sont relatifs à la racine du dépôt.

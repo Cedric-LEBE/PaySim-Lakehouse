@@ -80,6 +80,18 @@ bash scripts/explore.sh
 
 Kafka doit fonctionner pendant l'ingestion Bronze. Les étapes suivantes lisent les tables locales et peuvent s'exécuter avec Kafka arrêté. En cas d'échec d'une étape, consulter son erreur avant de poursuivre.
 
+## Exécution automatisée
+
+Après installation des dépendances et téléchargement du CSV, exécuter le pipeline complet sur les 10 000 premières lignes :
+
+```bash
+bash scripts/pipeline.sh --max-messages 10000
+```
+
+Le lanceur vérifie l'empreinte du CSV et le préfixe demandé, démarre Kafka, publie les événements, construit Bronze, arrête Kafka, puis construit Silver, Gold et l'étoile et rapproche les résultats du CSV. Chaque étape doit réussir avant la suivante. Le débit par défaut est de 100 événements/s, avec des lots Bronze de 1 000 événements.
+
+Les journaux et durées sont conservés dans `data/runs/<exécution>/`, avec un bilan `report.json`. Le lanceur conserve les tables et checkpoints existants ; un rejeu augmente Bronze mais reste dédupliqué dans Silver. Il prend en charge macOS et Linux. Voir [l'exploitation du lanceur](docs/operations.md#pipeline-complet).
+
 ## Résultats de référence
 
 Sur un environnement neuf, avec les **100 premières transactions** du CSV vérifié :
