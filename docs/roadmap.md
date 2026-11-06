@@ -15,7 +15,7 @@
 | Exploration | Requêtes Spark SQL sur un instantané cohérent de l'étoile |
 | Validation | Tests unitaires en GitHub Actions ; intégration locale de reprise, qualité, précision et jointures |
 
-Le périmètre validé de bout en bout comprend les préfixes de 100 puis 10 000 transactions. Silver, Gold et les dimensions sont construits en batch complet. Le dépôt fournit une plateforme locale de préparation et d'analyse des données ; la prédiction de fraude est une évolution distincte.
+Le périmètre validé de bout en bout comprend les préfixes de 100, 10 000 et 250 000 transactions. Silver, Gold et les dimensions sont construits en batch complet. Le dépôt fournit une plateforme locale de préparation et d'analyse des données ; la prédiction de fraude est une évolution distincte.
 
 ## Prochaines étapes locales
 

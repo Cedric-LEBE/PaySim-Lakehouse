@@ -83,9 +83,37 @@ BANKING_SPARK_APP=tests/integration/replay_check.py bash scripts/bronze.sh --max
 
 Exécuter les étapes successivement et s'arrêter en cas d'échec. Conserver la table Bronze et son checkpoint existants. Le producer repart du début ; Silver doit conserver exactement 10 000 identités distinctes. Les comptes Bronze, doublons et quarantaine dépendent des publications antérieures.
 
-Le contrôle compare chaque champ métier Silver au CSV, rapproche les agrégats globaux/par type/par étape et vérifie les identités et totaux des faits ainsi que les effectifs des dimensions publiées. Il lit les tables sans les modifier. Son paramètre `--max-messages` permet de choisir un autre préfixe du CSV ; ce contrôle conserve ce préfixe en mémoire et vise des volumes locaux bornés.
+Le contrôle compare chaque champ métier Silver au CSV, rapproche les agrégats globaux/par type/par étape et vérifie les identités et totaux des faits ainsi que les effectifs des dimensions publiées. Il lit les tables sans les modifier. Son paramètre `--max-messages` permet de choisir un autre préfixe du CSV. Le CSV est lu ligne par ligne et les transactions Silver sont transférées vers Python une partition à la fois après tri par ligne source. Les agrégats et les identifiants de comptes distincts restent en mémoire ; toutes les transactions ne sont plus collectées simultanément.
 
 Résultats attendus : 10 000 transactions, montant total 1 035 466 899,49, 68 fraudes (0,68 %) et montant frauduleux 36 275 527,43. L'étoile contient 10 000 faits, 5 types, 7 heures relatives et 16 397 comptes. Les tests `gold_check.py` et `star_check.py` ci-dessus restent dédiés au préfixe de 100 lignes ; utiliser `replay_check.py` pour ce périmètre élargi.
+
+## Palier de 250 000 lignes
+
+Le lanceur a été validé sur les 250 000 premières lignes, après les rejeux précédents :
+
+```bash
+bash scripts/pipeline.sh --max-messages 250000 --rate 1000 --max-offsets 5000
+```
+
+| Contrôle | Résultat observé |
+| --- | ---: |
+| Livraisons Kafka confirmées | 250 000 |
+| Événements Bronze, historique compris | 280 106 |
+| Transactions Silver et faits uniques | 250 000 |
+| Doublons retirés dans Silver | 30 100 |
+| Quarantaine, anciens événements synthétiques | 6 |
+| Montant total | 44 796 585 140,23 |
+| Transactions frauduleuses | 163 (0,0652 %) |
+| Montant frauduleux | 128 120 119,75 |
+| Types / heures relatives / comptes | 5 / 14 / 365 533 |
+
+La comparaison Silver champ par champ au CSV, les agrégats Gold et les contrôles de l'étoile ont réussi. Les comptes Bronze/doublons/quarantaine dépendent de l'historique ; ils ne sont pas les résultats attendus d'un environnement neuf.
+
+L'exécution locale a duré 542,12 s (environ 9 min 02 s), dont 316,72 s de publication, 75,44 s pour Bronze, 38,49 s pour Silver, 20,07 s pour Gold, 35,31 s pour l'étoile et 38,27 s de contrôle final. Ces temps ne constituent pas une garantie de performance.
+
+La somme des RSS des processus hôtes du pipeline, échantillonnée toutes les 5 s, a atteint environ 771 Mio. Elle exclut la machine virtuelle Docker, peut compter des pages partagées plusieurs fois et ne constitue pas le pic mémoire total de la machine. Kafka conserve sa limite Compose de 1 Gio ; Spark conserve son heap de 768 Mio et ses deux threads. Les dossiers Bronze/Silver/Gold, historique Delta compris, occupaient environ 276 Mio après exécution ; ce chiffre exclut Kafka, le CSV, les dépendances et les caches Spark.
+
+Les journaux, `report.json` et les mesures ponctuelles `resources.json` de cette validation sont conservés localement sous `data/runs/`, hors Git. Le lanceur produit les durées ; la mesure RSS a été réalisée par un observateur externe pour cette validation et n'est pas intégrée au lanceur.
 
 ## Relances et interruptions
 
