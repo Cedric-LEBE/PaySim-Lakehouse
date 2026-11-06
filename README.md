@@ -107,6 +107,8 @@ Les tests unitaires ne nécessitent ni Kafka ni Spark :
 PYTHONPATH=src .venv/bin/python -m unittest discover -s tests -v
 ```
 
+Le workflow [GitHub Actions CI](.github/workflows/ci.yml) exécute les tests unitaires sur Ubuntu avec Python 3.13 à chaque push et pull request. Il peut aussi être lancé manuellement depuis l'onglet Actions. Son périmètre est indépendant de Kafka, Spark et du CSV complet.
+
 La [documentation des tests](docs/testing.md) donne les commandes d'intégration, leurs prérequis et les données utilisées. Certains tests attendent précisément l'échantillon de 100 transactions ci-dessus.
 
 ## Organisation du dépôt

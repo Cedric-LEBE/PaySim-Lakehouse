@@ -68,4 +68,20 @@ La publication de fixtures ou les rejeux changent les comptes Bronze. Silver con
 - Relancer Silver et Gold sans changement d'entrée conserve les lignes métier et les indicateurs, tout en créant de nouvelles versions Delta.
 - Le test étoile simule une interruption avant publication du manifeste et vérifie que les versions précédemment publiées restent lisibles.
 
-L'interruption pendant une écriture Bronze, la perte de rétention Kafka et un benchmark du dataset complet restent à tester. Il n'y a pas encore de pipeline CI déclaré ; les commandes de ce document sont exécutées localement.
+L'interruption pendant une écriture Bronze, la perte de rétention Kafka et un benchmark du dataset complet restent à tester. Les tests d'intégration de ce document s'exécutent localement ; la CI couvre actuellement les tests unitaires.
+
+## GitHub Actions
+
+Le workflow [CI](../.github/workflows/ci.yml) se déclenche à chaque push, à chaque ouverture ou mise à jour d'une pull request, et manuellement via `workflow_dispatch`. Sur Ubuntu 24.04 avec Python 3.13, il installe uniquement `requirements.txt`, vérifie les dépendances puis exécute :
+
+```bash
+PYTHONPATH=src python -m unittest discover -s tests -p 'test_*.py' -v
+```
+
+Les tests utilisent la fixture du dépôt et des mocks. Ils ne nécessitent ni service Kafka, ni Spark, ni CSV Kaggle et ne traitent pas le dataset complet. Les tests d'intégration restent une étape distincte.
+
+Le job est limité à cinq minutes. Les téléchargements pip sont mis en cache à partir de requirements.txt ; les exécutions précédentes du même workflow et de la même référence sont annulées si une nouvelle arrive. Le workflow demande seulement la lecture du dépôt ; aucun secret supplémentaire ni accès cloud n'est configuré. Les versions des actions sont figées par SHA, avec leur tag indiqué en commentaire.
+
+Après avoir poussé le fichier du workflow, ouvrir **Actions → CI → Unit tests (Python 3.13)** pour consulter le résultat et le détail des six tests actuels. Une coche verte valide ce périmètre de tests ; elle ne constitue pas une validation du rejeu intégral PaySim. Le bouton **Run workflow** devient disponible lorsque le workflow est présent sur la branche par défaut.
+
+Référence : [construire et tester un projet Python avec GitHub Actions](https://docs.github.com/en/actions/tutorials/build-and-test-code/python).
