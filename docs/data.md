@@ -60,7 +60,7 @@ Le producer exige les onze colonnes, sans colonne supplémentaire :
 | `isFraud` | Label de fraude du simulateur, utilisé pour le reporting et l'évaluation |
 | `isFlaggedFraud` | Flag fourni par PaySim, comptabilisé séparément du label |
 
-Les montants sont transmis dans le JSON sous forme de chaînes décimales. Silver exige des valeurs positives ou nulles, sans signe et avec au plus deux décimales, représentables en Decimal(20,2). Les labels doivent valoir 0 ou 1. Les contrôles détaillés sont décrits dans [l'architecture](architecture.md#silver--qualité-et-déduplication).
+Les montants sont transmis dans le JSON sous forme de chaînes décimales. Silver exige des valeurs positives ou nulles, sans signe, représentables exactement en Decimal(20,2), sans arrondi. La notation scientifique est acceptée lorsque sa valeur respecte ces contraintes (par exemple `1.0E+7` vaut `10000000.00`) ; les valeurs inférieures au centime comme `1E-3` sont refusées. Les labels doivent valoir 0 ou 1. Les contrôles détaillés sont décrits dans [l'architecture](architecture.md#silver--qualité-et-déduplication).
 
 Les labels ne doivent pas être utilisés comme variables prédictives d'un futur modèle de fraude. Les soldes sont des observations à la transaction ; leur somme sur plusieurs transactions n'est pas un solde consolidé. Aucun enrichissement en dates réelles, en devise ou en données démographiques n'est réalisé.
 

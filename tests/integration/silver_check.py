@@ -5,7 +5,7 @@ from pathlib import Path
 from pyspark.sql import functions as F
 from banking.bronze import bronze_frame, session
 from banking.producer import event, records
-from banking.silver import DATASET, build
+from banking.silver import DATASET, build, exact_money
 
 root = Path('data/integration/silver-' + uuid.uuid4().hex).resolve()
 root.mkdir(parents=True)
@@ -34,6 +34,17 @@ def append(payloads, offset, mode):
     bronze_frame(raw).write.format('delta').mode(mode).save(str(root / 'bronze'))
 
 try:
+    # Scientific notation must preserve cents, never silently round or underflow.
+    cases = [('1.0E+7', True), ('1.234E+2', True), ('1E-2', True),
+             ('1000E-3', True), ('1.2300', True), ('0E-50', True),
+             ('1.001E+0', False), ('1E-3', False), ('1E-50', False),
+             ('1E+19', False), ('NaN', False), ('Infinity', False),
+             ('-1', False), ('1E+9223372036854775807', False),
+             ('1E-9223372036854775808', False)]
+    checks = spark.createDataFrame(cases, ['raw', 'expected'])
+    checks = checks.withColumn('money', F.col('raw').try_cast('decimal(20,2)'))
+    checks = checks.withColumn('accepted', F.coalesce(exact_money(F.col('raw'), F.col('money')), F.lit(False)))
+    assert checks.filter(F.col('accepted') != F.col('expected')).count() == 0
     append(payloads, 0, 'error')
     first = build(spark, root / 'bronze', root / 'silver')
     assert first['silver_rows'] == 1 and first['quarantine_rows'] == 5 and first['duplicates_removed'] == 1

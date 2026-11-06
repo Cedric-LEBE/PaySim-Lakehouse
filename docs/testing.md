@@ -42,7 +42,7 @@ Ces tests s'exécutent successivement ; Kafka peut rester arrêté.
 
 | Test | Prérequis | Périmètre |
 | --- | --- | --- |
-| `silver_check.py` | Fixture fournie dans le dépôt | Typage, précision sans arrondi, quarantaine, conflit d'identité, déduplication et reconstructions 1→1→2 |
+| `silver_check.py` | Fixture fournie dans le dépôt | Typage, notation scientifique exacte, rejet des sous-centimes et débordements, précision sans arrondi, quarantaine, conflit d'identité, déduplication et reconstructions 1→1→2 |
 | `gold_check.py` | CSV vérifié et Silver contenant exactement les 100 premières transactions PaySim | Rapprochement des agrégats avec le CSV, relance stable, cas vide/sans fraude, distinction flag/label, rejet des doublons |
 | `star_check.py` | Silver contenant exactement les 100 premières transactions PaySim | Grain, reconstitution par jointures, totaux SQL, clés stables, deux rôles du compte, références et interruption de publication |
 
@@ -61,6 +61,31 @@ Suivre le [démarrage du README](../README.md#démarrage-local) sur des destinat
 Le bilan attendu est de 2 transactions étiquetées frauduleuses, 362,00 de montant frauduleux et 11 644 940,90 de montant total. L'étoile contient 100 faits, 4 types observés, 1 heure relative et 189 comptes distincts.
 
 La publication de fixtures ou les rejeux changent les comptes Bronze. Silver conserve un seul événement admissible par event_id et met les autres datasets en quarantaine. Les tests Gold et étoile vérifient un échantillon précis ; les adapter avant d'élargir volontairement le périmètre Silver.
+
+## Rejeu de 10 000 lignes
+
+Après vérification du CSV, publier les 10 000 premières lignes avec le même dataset ID que l'échantillon initial :
+
+```bash
+bash scripts/kafka.sh start
+bash scripts/kafka.sh topic
+PYTHONPATH=src .venv/bin/python -m banking.producer \
+  --csv data/raw/PS_20174392719_1491204439457_log.csv \
+  --dataset-id paysim-sha256-16910f90577b0d981bf8ff289714510bb89bc71bff7d3f220f024e287e4eea6b \
+  --max-messages 10000 --rate 100
+bash scripts/bronze.sh --max-offsets 1000
+bash scripts/kafka.sh stop
+bash scripts/silver.sh
+bash scripts/gold.sh
+bash scripts/star.sh
+BANKING_SPARK_APP=tests/integration/replay_check.py bash scripts/bronze.sh --max-messages 10000
+```
+
+Exécuter les étapes successivement et s'arrêter en cas d'échec. Conserver la table Bronze et son checkpoint existants. Le producer repart du début ; Silver doit conserver exactement 10 000 identités distinctes. Les comptes Bronze, doublons et quarantaine dépendent des publications antérieures.
+
+Le contrôle compare chaque champ métier Silver au CSV, rapproche les agrégats globaux/par type/par étape et vérifie les identités et totaux des faits ainsi que les effectifs des dimensions publiées. Il lit les tables sans les modifier. Son paramètre `--max-messages` permet de choisir un autre préfixe du CSV ; ce contrôle conserve ce préfixe en mémoire et vise des volumes locaux bornés.
+
+Résultats attendus : 10 000 transactions, montant total 1 035 466 899,49, 68 fraudes (0,68 %) et montant frauduleux 36 275 527,43. L'étoile contient 10 000 faits, 5 types, 7 heures relatives et 16 397 comptes. Les tests `gold_check.py` et `star_check.py` ci-dessus restent dédiés au préfixe de 100 lignes ; utiliser `replay_check.py` pour ce périmètre élargi.
 
 ## Relances et interruptions
 

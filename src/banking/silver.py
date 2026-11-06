@@ -8,6 +8,22 @@ MONEY = ['amount', 'oldbalanceOrg', 'newbalanceOrig', 'oldbalanceDest', 'newbala
 FIELDS = ['step', 'type', *MONEY, 'nameOrig', 'nameDest', 'isFraud', 'isFlaggedFraud']
 
 
+def exact_money(raw, value):
+    """Accept finite unsigned decimals exactly representable at scale two."""
+    from pyspark.sql import functions as F
+    mantissa = F.regexp_extract(raw, r'^([0-9]+(?:\.[0-9]+)?)', 1)
+    fraction = F.regexp_extract(mantissa, r'\.([0-9]+)$', 1)
+    digits = F.regexp_replace(mantissa, r'\.', '')
+    trailing_zeros = F.length(digits) - F.length(F.regexp_replace(digits, '0+$', ''))
+    exponent_text = F.regexp_extract(raw, r'[eE]([+-]?[0-9]+)$', 1)
+    exponent = F.when(exponent_text == '', F.lit(0)).otherwise(exponent_text.try_cast('long'))
+    # The cast enforces Decimal(20,2) range; the scale check prevents rounding.
+    scale = F.length(fraction) - trailing_zeros - exponent
+    return (raw.rlike(r'^[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?$')
+            & exponent.between(-1000, 1000) & ((scale <= 2) | digits.rlike(r'^0+$'))
+            & value.isNotNull() & (value >= 0))
+
+
 def classify(bronze, dataset):
     from pyspark.sql import functions as F
     frame = bronze
@@ -33,8 +49,7 @@ def classify(bronze, dataset):
     ]
     for name in MONEY:
         rules.append(('invalid_' + name,
-                      F.col('event.transaction.' + name).rlike(r'^[0-9]+(?:\.[0-9]{1,2})?$')
-                      & F.col(name).isNotNull() & (F.col(name) >= 0)))
+                      exact_money(F.col('event.transaction.' + name), F.col(name))))
     frame = frame.withColumn('quality_reasons', F.filter(F.array(*[
         F.when(~F.coalesce(condition, F.lit(False)), F.lit(reason)) for reason, condition in rules
     ]), lambda reason: reason.isNotNull()))
