@@ -48,7 +48,7 @@ Le job n'a ni planification ni déclenchement automatique. Pour importer ou vér
 databricks bundle run import_star --profile dev --var warehouse_id=<ID_EXISTANT>
 ```
 
-Le notebook reçoit ses paramètres du bundle, compare les tables existantes à l'export et ne les écrase pas. Le déploiement seul ne lance pas ce job. Le dashboard reste un brouillon ; la publication et les permissions de partage ne sont pas modifiées. Le [workflow manuel GitHub](deployment.md) est préparé avec OIDC et sans secret persistant, mais reste non activé faute de configuration de fédération de compte disponible dans Free Edition.
+Le notebook reçoit ses paramètres du bundle, compare les tables existantes à l'export et ne les écrase pas. Le déploiement seul ne lance pas ce job. Le dashboard reste un brouillon ; la publication et les permissions de partage ne sont pas modifiées. Le [workflow manuel GitHub](deployment.md) est préparé avec OIDC et sans secret persistant, mais reste non activé. OIDC nécessite une configuration de compte indisponible dans Free Edition ; une option PAT explicite nécessite un secret GitHub protégé configuré par le propriétaire.
 
 ## Validation réalisée
 
@@ -60,7 +60,7 @@ Le bundle a passé la validation stricte et a été déployé dans la cible `dev
 BANKING_SPARK_APP=tests/integration/dashboard_analytics_check.py bash scripts/bronze.sh
 ```
 
-Le contrôle local lit l'étoile publiée de 250 000 faits. Il exécute les seize analyses avec paramètres liés, réconcilie les montants et volumes, vérifie les filtres combinés et le cas vide. Les seize tests unitaires incluent la synchronisation du JSON généré, les références des widgets et les liaisons des paramètres. La validation stricte DAB et l'acceptation de la ressource par l'API complètent ces contrôles ; l'affichage et l'interaction finale des filtres doivent être vérifiés dans l'éditeur Databricks.
+Le contrôle local lit l'étoile publiée de 250 000 faits. Il exécute les seize analyses avec paramètres liés, réconcilie les montants et volumes, vérifie les filtres combinés et le cas vide. Les dix-huit tests unitaires incluent la synchronisation du JSON généré, les références des widgets et les liaisons des paramètres. La validation stricte DAB et l'acceptation de la ressource par l'API complètent ces contrôles ; l'affichage et l'interaction finale des filtres doivent être vérifiés dans l'éditeur Databricks.
 
 Modifier les SQL ou le générateur, régénérer le JSON puis déployer à nouveau. Une modification manuelle du dashboard géré par DAB peut être remplacée au déploiement suivant ; reporter les changements souhaités dans le dépôt. Ne pas lier ce bundle au dashboard manuel sans décision explicite.
 

@@ -108,7 +108,7 @@ Le [guide du premier dashboard](docs/databricks-dashboard.md) décrit le chargem
 
 Le [bundle DAB analytique](docs/databricks-bundle.md) versionne désormais un dashboard de quatre pages et un job d'import. Les seize analyses SQL sont testées avec filtres combinés sur les 250 000 faits ; le dashboard manuel est conservé.
 
-Le [workflow de déploiement manuel](docs/deployment.md) est préparé, mais non activé : la configuration de fédération OIDC de compte nécessaire n’est pas accessible depuis Free Edition. Le déploiement DAB local reste opérationnel.
+Le [workflow de déploiement manuel](docs/deployment.md) est préparé, mais non activé : la configuration de fédération OIDC de compte nécessaire n’est pas accessible depuis Free Edition. Une option PAT explicite est préparée pour un secret GitHub protégé, sans jeton créé ni activation automatique. Le déploiement DAB local reste opérationnel.
 
 ## Résultats de référence
 
@@ -137,7 +137,7 @@ Les tests unitaires ne nécessitent ni Kafka ni Spark :
 PYTHONPATH=src .venv/bin/python -m unittest discover -s tests -v
 ```
 
-Le workflow [GitHub Actions CI](.github/workflows/ci.yml) exécute les seize tests unitaires, puis un scénario d'intégration synthétique Bronze → Silver → Gold → étoile, sur Ubuntu avec Python 3.13 et Java 17. Il se déclenche sur push, pull request et lancement manuel. Le scénario vérifie les rejeux et le retrait d'une transaction en conflit sans Kafka, Docker, CSV Kaggle ni secrets cloud.
+Le workflow [GitHub Actions CI](.github/workflows/ci.yml) exécute les dix-huit tests unitaires, puis un scénario d'intégration synthétique Bronze → Silver → Gold → étoile, sur Ubuntu avec Python 3.13 et Java 17. Il se déclenche sur push, pull request et lancement manuel. Le scénario vérifie les rejeux et le retrait d'une transaction en conflit sans Kafka, Docker, CSV Kaggle ni secrets cloud.
 
 La [documentation des tests](docs/testing.md) donne les commandes d'intégration, leurs prérequis et les données utilisées. Certains tests attendent précisément l'échantillon de 100 transactions ci-dessus.
 

@@ -14,14 +14,22 @@ def check_config(env):
     if env.get('GITHUB_EVENT_NAME') != 'workflow_dispatch' or env.get('GITHUB_REF') != 'refs/heads/main':
         raise ValueError('Deployment requires a manual dispatch from main.')
     if env.get('DATABRICKS_CD_ENABLED') != 'true':
-        raise ValueError('CD is not enabled. Configure a supported Databricks service principal and GitHub OIDC federation before enabling DATABRICKS_CD_ENABLED. Free Edition cannot configure the account-level federation policy through its account console/APIs.')
-    for key in ('DATABRICKS_HOST', 'DATABRICKS_CLIENT_ID', 'DATABRICKS_WAREHOUSE_ID'):
+        raise ValueError('CD is not enabled. Configure supported OIDC federation or explicitly opt into the PAT secret route before enabling DATABRICKS_CD_ENABLED.')
+    mode = env.get('DATABRICKS_AUTH_TYPE') or 'github-oidc'
+    if mode not in ('github-oidc', 'pat'):
+        raise ValueError('Only github-oidc or an explicitly configured pat mode is supported.')
+    if mode == 'pat' and env.get('DATABRICKS_PAT_READY') != 'true':
+        raise ValueError('PAT mode requires explicit DATABRICKS_PAT_READY=true and the protected environment secret.')
+    required = ['DATABRICKS_HOST', 'DATABRICKS_WAREHOUSE_ID']
+    if mode == 'github-oidc':
+        required.append('DATABRICKS_CLIENT_ID')
+    for key in required:
         if not env.get(key):
             raise ValueError('Missing repository variable: ' + key)
     host = urlparse(env['DATABRICKS_HOST'])
     if host.scheme != 'https' or not host.hostname or host.username or host.password or host.query or host.fragment or host.path not in ('', '/'):
         raise ValueError('DATABRICKS_HOST must be an HTTPS workspace origin without credentials or URL parameters.')
-    if not re.fullmatch(r'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}', env['DATABRICKS_CLIENT_ID']):
+    if mode == 'github-oidc' and not re.fullmatch(r'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}', env['DATABRICKS_CLIENT_ID']):
         raise ValueError('Invalid Databricks application ID.')
     if not re.fullmatch(r'[0-9a-fA-F]+', env['DATABRICKS_WAREHOUSE_ID']):
         raise ValueError('Invalid SQL warehouse ID.')

@@ -23,6 +23,15 @@ class DeployGateTests(unittest.TestCase):
             with self.subTest(change=change),self.assertRaises(ValueError):gate.check_config({**self.configured(),**change})
         gate.check_config(self.configured())
 
+    def test_pat_is_an_explicit_choice_and_never_an_automatic_fallback(self):
+        env={**self.configured(),'DATABRICKS_AUTH_TYPE':'pat'}
+        env.pop('DATABRICKS_CLIENT_ID')
+        with self.assertRaisesRegex(ValueError,'explicit'):gate.check_config(env)
+        gate.check_config({**env,'DATABRICKS_PAT_READY':'true'})
+
+    def test_unknown_authentication_mode_is_rejected(self):
+        with self.assertRaisesRegex(ValueError,'Only'):gate.check_config({**self.configured(),'DATABRICKS_AUTH_TYPE':'oauth-u2m'})
+
     def ci(self, runs=None, jobs=None, head='abc'):
         if runs is None:runs=[{'id':10,'run_number':1,'head_sha':'abc','head_branch':'main','event':'push','status':'completed','conclusion':'success'}]
         if jobs is None:jobs=[{'name':name,'conclusion':'success'} for name in gate.EXPECTED_JOBS]

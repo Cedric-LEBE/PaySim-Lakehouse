@@ -10,9 +10,9 @@ Exécuter les commandes depuis la racine du dépôt, après installation des dé
 PYTHONPATH=src .venv/bin/python -m unittest discover -s tests -v
 ```
 
-Les seize tests couvrent également l’ordre des étapes du lanceur, le blocage après échec, le nettoyage Kafka et le refus d’un CSV incorrect avant publication. Ils couvrent la précision et l'identité des événements producer, la validation consumer et l'absence de confirmation d'offset lorsque le message, sa clé ou sa sortie sont en échec. Kafka, Spark et le CSV Kaggle ne sont pas requis.
+Les dix-huit tests couvrent également l’ordre des étapes du lanceur, le blocage après échec, le nettoyage Kafka et le refus d’un CSV incorrect avant publication. Ils couvrent la précision et l'identité des événements producer, la validation consumer et l'absence de confirmation d'offset lorsque le message, sa clé ou sa sortie sont en échec. Kafka, Spark et le CSV Kaggle ne sont pas requis.
 
-Les contrôles de déploiement ajoutent cinq tests : configuration absente, mauvaise branche/événement, commit exact, attente de CI, jobs ignorés et refus de revenir à un ancien succès après un échec plus récent. Ils ne nécessitent aucun accès Databricks.
+Les contrôles de déploiement ajoutent sept tests : configuration absente, mauvaise branche/événement, commit exact, attente de CI, jobs ignorés et refus de revenir à un ancien succès après un échec plus récent. Ils ne nécessitent aucun accès Databricks.
 
 ## Tests Kafka
 
@@ -140,7 +140,7 @@ L'interruption pendant une écriture Bronze, la perte de rétention Kafka et un 
 
 Le workflow [CI](../.github/workflows/ci.yml) se déclenche à chaque push, à chaque ouverture ou mise à jour d'une pull request, et manuellement via `workflow_dispatch`. Les deux jobs utilisent Ubuntu 24.04 et Python 3.13, avec lecture seule du dépôt et actions figées par SHA.
 
-1. **Unit tests (Python 3.13)** installe `requirements.txt`, vérifie les dépendances et exécute les seize tests unitaires sans Spark ni Kafka. Ce job est limité à cinq minutes.
+1. **Unit tests (Python 3.13)** installe `requirements.txt`, vérifie les dépendances et exécute les dix-huit tests unitaires sans Spark ni Kafka. Ce job est limité à cinq minutes.
 2. **Incremental pipeline (Spark / Delta)** attend la réussite du premier job, configure Java 17 Temurin, crée `.venv` et installe `requirements-streaming.txt`. Il est limité à quinze minutes et exécute :
 
 ```bash

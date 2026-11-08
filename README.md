@@ -134,7 +134,7 @@ databricks bundle validate --profile dev --strict --var warehouse_id=<EXISTING_W
 databricks bundle deploy --profile dev --var warehouse_id=<EXISTING_WAREHOUSE_ID>
 ```
 
-Replace the placeholder and profile as needed. The bundle reuses existing compute, defines an unscheduled import job and creates a draft dashboard. It does not configure public sharing. A [manual GitHub deployment workflow](docs/deployment.md) is prepared but not activated: the standard OIDC setup requires account-level federation configuration unavailable in Free Edition. Never commit authentication tokens or bundle state.
+Replace the placeholder and profile as needed. The bundle reuses existing compute, defines an unscheduled import job and creates a draft dashboard. It does not configure public sharing. A [manual GitHub deployment workflow](docs/deployment.md) is prepared but not activated: the standard OIDC setup requires account-level federation configuration unavailable in Free Edition. An explicitly selected PAT mode is prepared for a protected GitHub environment secret; no token has been created or stored. Never commit authentication tokens or bundle state.
 
 ## Validated results
 

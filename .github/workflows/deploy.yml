@@ -19,6 +19,8 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ github.token }}
       DATABRICKS_CD_ENABLED: ${{ vars.DATABRICKS_CD_ENABLED }}
+      DATABRICKS_PAT_READY: ${{ vars.DATABRICKS_PAT_READY }}
+      DATABRICKS_AUTH_TYPE: ${{ vars.DATABRICKS_AUTH_TYPE || 'github-oidc' }}
       DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST }}
       DATABRICKS_CLIENT_ID: ${{ vars.DATABRICKS_CLIENT_ID }}
       DATABRICKS_WAREHOUSE_ID: ${{ vars.DATABRICKS_WAREHOUSE_ID }}
@@ -52,7 +54,9 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ github.token }}
       DATABRICKS_CD_ENABLED: ${{ vars.DATABRICKS_CD_ENABLED }}
-      DATABRICKS_AUTH_TYPE: github-oidc
+      DATABRICKS_PAT_READY: ${{ vars.DATABRICKS_PAT_READY }}
+      DATABRICKS_AUTH_TYPE: ${{ vars.DATABRICKS_AUTH_TYPE || 'github-oidc' }}
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
       DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST }}
       DATABRICKS_CLIENT_ID: ${{ vars.DATABRICKS_CLIENT_ID }}
       DATABRICKS_WAREHOUSE_ID: ${{ vars.DATABRICKS_WAREHOUSE_ID }}
@@ -78,8 +82,14 @@ jobs:
         run: |
           python scripts/build_dashboard.py
           git diff --exit-code -- databricks/dashboards/paysim.lvdash.json
-      - name: Verify federated authentication
-        run: databricks current-user me
+      - name: Verify configured authentication
+        run: |
+          python - <<'PYCODE'
+          import os
+          if os.environ['DATABRICKS_AUTH_TYPE'] == 'pat' and not os.environ.get('DATABRICKS_TOKEN'):
+              raise SystemExit('Missing DATABRICKS_TOKEN in the protected databricks-ci environment.')
+          PYCODE
+          databricks current-user me > /dev/null
       - name: Validate bundle
         run: databricks bundle validate --target ci --strict
       - name: Recheck main and CI immediately before deployment
