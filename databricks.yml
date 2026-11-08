@@ -51,5 +51,4 @@ sync:
     - sql/analytics/**
   exclude:
     - data/**
-    - .venv/**
     - .git/**
