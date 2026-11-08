@@ -1,38 +1,35 @@
 # Databricks notebook source
-# Import this file as a Python notebook in Databricks.
-# Upload the four Parquet files AND manifest.json into one Unity Catalog volume directory first.
-import hashlib
-import json
-from pathlib import Path
+# Deploy this notebook together with the sibling _import_support.py workspace file.
+# Source: four Parquet files and manifest.json in a UC volume or S3 export directory.
+# S3 URLs require an existing external volume; no AWS keys or local copies are used.
 import re
 from decimal import Decimal
+from _import_support import PRIMARY_KEYS, quote, resolve_export_path, load_manifest, verify_file
 from pyspark.sql import functions as F
 from pyspark.sql.types import StructType, DecimalType
 
 dbutils.widgets.text('export_path', '')
 dbutils.widgets.text('catalog', spark.catalog.currentCatalog())
 dbutils.widgets.text('target_schema', '')
-export_path = Path(dbutils.widgets.get('export_path'))
-assert str(export_path).startswith('/Volumes/'), 'Renseigner le dossier export sous /Volumes/...'
+dbutils.widgets.text('s3_volume', '')
+export_path = resolve_export_path(
+    dbutils.widgets.get('export_path').strip(),
+    dbutils.widgets.get('s3_volume').strip(),
+    lambda name: spark.sql('DESCRIBE VOLUME ' + name).first().asDict()
+)
 catalog = dbutils.widgets.get('catalog')
-manifest = json.loads((export_path / 'manifest.json').read_text())
-assert manifest['format_version'] == 1
-assert re.fullmatch(r'[A-Za-z0-9_-]+', manifest['export_id'])
+manifest = load_manifest(export_path)
 schema = dbutils.widgets.get('target_schema').strip() or 'paysim_' + manifest['export_id'].lower().replace('-', '_')
 assert re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', schema)
-def quote(identifier):
-    return '`' + identifier.replace('`', '``') + '`'
 namespace = quote(catalog) + '.' + quote(schema)
-primary_keys = {'dim_transaction_type': 'transaction_type_key', 'dim_simulation_time': 'simulation_time_key',
-                'dim_account': 'account_key', 'fact_transaction': 'transaction_key'}
-assert set(manifest['tables']) == set(primary_keys)
+primary_keys = PRIMARY_KEYS
+# Verify every file before starting Spark validation or any target writes.
+for name, info in manifest['tables'].items():
+    verify_file(export_path / info['file'], info)
 frames = {}
 for name, primary in primary_keys.items():
     info = manifest['tables'][name]
-    assert info['file'] == name + '.parquet'
     path = export_path / info['file']
-    with path.open('rb') as stream:
-        assert hashlib.file_digest(stream, 'sha256').hexdigest() == info['sha256'], name
     # Explicit source types preserve monetary Decimal(20,2).
     frame = spark.read.schema(StructType.fromJson(info['schema'])).parquet(str(path))
     stats = frame.agg(F.count('*').alias('rows'), F.countDistinct(primary).alias('ids')).first()

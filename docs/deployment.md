@@ -60,7 +60,8 @@ Create the GitHub environment `databricks-ci`, restrict its deployment branches 
 | `DATABRICKS_WAREHOUSE_ID` | Existing SQL warehouse ID |
 | `DATABRICKS_CATALOG` | Optional; defaults to `workspace` |
 | `DATABRICKS_SCHEMA` | Optional; defaults to the currently validated PaySim snapshot schema |
-| `DATABRICKS_EXPORT_PATH` | Optional; defaults to the export already uploaded to the Unity Catalog volume |
+| `DATABRICKS_EXPORT_PATH` | Optional; verified export folder under `/Volumes/` or `s3://`; defaults to the existing volume export |
+| `DATABRICKS_S3_VOLUME` | Required for S3 export URLs; existing external volume as `catalog.schema.volume` |
 
 The variables used by the preflight must be repository variables, not environment-only values: the preflight runs before entering the deployment environment. No client secret is used. OIDC mode does not need a `DATABRICKS_TOKEN`; the explicit PAT alternative uses only the protected environment secret. OIDC does not remove the account's ordinary compute/storage charges; the workflow does not run compute jobs itself.
 

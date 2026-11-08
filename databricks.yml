@@ -10,8 +10,11 @@ variables:
   warehouse_id:
     description: Existing SQL warehouse ID; no compute resource is created
   export_path:
-    description: Verified export directory already uploaded to the volume
+    description: Verified export directory under /Volumes or s3://
     default: /Volumes/workspace/paysim_uploads/exports/20261106T220939Z-9c554717/
+  s3_volume:
+    description: Existing external volume (catalog.schema.volume) required for an S3 export URL
+    default: ''
 resources:
   jobs:
     import_star:
@@ -24,6 +27,7 @@ resources:
             notebook_path: ${workspace.file_path}/databricks/notebooks/01_import_star.py
             base_parameters:
               export_path: ${var.export_path}
+              s3_volume: ${var.s3_volume}
               catalog: ${var.catalog}
               target_schema: ${var.schema}
   dashboards:

@@ -83,3 +83,8 @@ jobs:
         env:
           BANKING_SPARK_APP: tests/integration/replay_resume_check.py
         run: bash scripts/bronze.sh
+
+      - name: Run verified export import scenario
+        env:
+          BANKING_SPARK_APP: tests/integration/import_star_check.py
+        run: bash scripts/bronze.sh

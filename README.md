@@ -121,7 +121,9 @@ Export the four version-pinned star tables as a verified snapshot:
 bash scripts/export-star.sh
 ```
 
-The [import guide](docs/databricks-dashboard.md) covers the four Parquet files and manifest, a managed Unity Catalog volume, the validated import notebook and managed Delta tables. This initial transfer is a manual snapshot transfer, not a live connection to local Kafka.
+The [S3 import guide](docs/s3-import.md) explains the read-only IAM/Unity Catalog connection and streaming SHA-256 checks through an external volume. The notebook accepts S3 export URLs or existing `/Volumes/` paths. A two-row synthetic export has been imported from S3 in the workspace; full-dataset imports remain to be validated.
+
+The [initial import guide](docs/databricks-dashboard.md) covers the four Parquet files and manifest, a managed Unity Catalog volume, the validated import notebook and managed Delta tables. This initial transfer is a manual snapshot transfer, not a live connection to local Kafka.
 
 The [analytics bundle](docs/databricks-bundle.md) deploys an English-language dashboard with **16 analyses, 30 visualizations and six shared filters**:
 

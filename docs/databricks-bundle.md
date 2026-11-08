@@ -14,6 +14,8 @@ Le bundle `paysim-lakehouse` déploie un nouveau dashboard AI/BI et un job d'imp
 - [Analyses SQL](../sql/analytics/) : seize requêtes et un filtre commun, avec paramètres liés avant agrégation.
 - [Notebook d'import](../databricks/notebooks/01_import_star.py) : empreintes, clés, références et totaux contrôlés ; reprise des tables identiques existantes sans écrasement.
 
+Pour une source S3, fournir `export_path=s3://.../<export_id>/` et `s3_volume=catalog.schema.volume` ; le notebook vérifie le volume externe avant les empreintes. Voir [le guide S3](s3-import.md). Le module `_import_support.py` est synchronisé avec le notebook par DAB.
+
 ## Pages et règles de lecture
 
 | Page | Analyses |
@@ -40,7 +42,7 @@ databricks bundle validate --profile dev --strict --var warehouse_id=<ID_EXISTAN
 databricks bundle deploy --profile dev --var warehouse_id=<ID_EXISTANT>
 ```
 
-Remplacer `<ID_EXISTANT>` par l'identifiant réel, sans chevrons. Le nom du profil peut être adapté. Les variables `catalog`, `schema`, `export_path` et `warehouse_id` permettent de sélectionner l'environnement. Ne pas utiliser la variable `schema` pour prétendre qu'un nouveau dataset a été chargé : le volume, le manifeste et les tables doivent correspondre. Les requêtes utilisent `transactions_dashboard` sans qualification ; DAB injecte le catalogue et le schéma par défaut du dashboard.
+Remplacer `<ID_EXISTANT>` par l'identifiant réel, sans chevrons. Le nom du profil peut être adapté. Les variables `catalog`, `schema`, `export_path`, `s3_volume` et `warehouse_id` permettent de sélectionner l'environnement. Ne pas utiliser la variable `schema` pour prétendre qu'un nouveau dataset a été chargé : le volume, le manifeste et les tables doivent correspondre. Les requêtes utilisent `transactions_dashboard` sans qualification ; DAB injecte le catalogue et le schéma par défaut du dashboard.
 
 Le job n'a ni planification ni déclenchement automatique. Pour importer ou vérifier à nouveau un export déjà présent dans le volume :
 
@@ -60,7 +62,7 @@ Le bundle a passé la validation stricte et a été déployé dans la cible `dev
 BANKING_SPARK_APP=tests/integration/dashboard_analytics_check.py bash scripts/bronze.sh
 ```
 
-Le contrôle local lit l'étoile publiée de 250 000 faits. Il exécute les seize analyses avec paramètres liés, réconcilie les montants et volumes, vérifie les filtres combinés et le cas vide. Les vingt-sept tests unitaires incluent la synchronisation du JSON généré, les références des widgets et les liaisons des paramètres. La validation stricte DAB et l'acceptation de la ressource par l'API complètent ces contrôles ; l'affichage et l'interaction finale des filtres doivent être vérifiés dans l'éditeur Databricks.
+Le contrôle local lit l'étoile publiée de 250 000 faits. Il exécute les seize analyses avec paramètres liés, réconcilie les montants et volumes, vérifie les filtres combinés et le cas vide. Les trente-cinq tests unitaires incluent la synchronisation du JSON généré, les références des widgets et les liaisons des paramètres. La validation stricte DAB et l'acceptation de la ressource par l'API complètent ces contrôles ; l'affichage et l'interaction finale des filtres doivent être vérifiés dans l'éditeur Databricks.
 
 Modifier les SQL ou le générateur, régénérer le JSON puis déployer à nouveau. Une modification manuelle du dashboard géré par DAB peut être remplacée au déploiement suivant ; reporter les changements souhaités dans le dépôt. Ne pas lier ce bundle au dashboard manuel sans décision explicite.
 

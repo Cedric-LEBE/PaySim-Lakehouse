@@ -106,6 +106,8 @@ Le premier lancement vérifie le préfixe existant. Le curseur CSV avance après
 
 ## Dashboards Databricks
 
+Le [guide d’import S3](docs/s3-import.md) décrit la connexion en lecture seule et l’import vérifié via un volume externe Unity Catalog. Le notebook accepte aussi les anciens chemins `/Volumes/`. Un premier import S3 de deux transactions synthétiques a réussi dans un schéma de test du workspace ; l’import du dataset complet reste à valider.
+
 Un export cohérent des quatre tables est disponible pour préparer une restitution dans Databricks Free Edition :
 
 ```bash
@@ -145,7 +147,7 @@ Les tests unitaires ne nécessitent ni Kafka ni Spark :
 PYTHONPATH=src .venv/bin/python -m unittest discover -s tests -v
 ```
 
-Le workflow [GitHub Actions CI](.github/workflows/ci.yml) exécute les vingt-sept tests unitaires, puis un scénario d'intégration synthétique Bronze → Silver → Gold → étoile, sur Ubuntu avec Python 3.13 et Java 17. Il se déclenche sur push, pull request et lancement manuel. Le scénario vérifie les rejeux et le retrait d'une transaction en conflit sans Kafka, Docker, CSV Kaggle ni secrets cloud.
+Le workflow [GitHub Actions CI](.github/workflows/ci.yml) exécute les trente-cinq tests unitaires, puis un scénario d'intégration synthétique Bronze → Silver → Gold → étoile, sur Ubuntu avec Python 3.13 et Java 17. Il se déclenche sur push, pull request et lancement manuel. Le scénario vérifie les rejeux et le retrait d'une transaction en conflit sans Kafka, Docker, CSV Kaggle ni secrets cloud.
 
 La [documentation des tests](docs/testing.md) donne les commandes d'intégration, leurs prérequis et les données utilisées. Certains tests attendent précisément l'échantillon de 100 transactions ci-dessus.
 

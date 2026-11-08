@@ -10,7 +10,7 @@ Exécuter les commandes depuis la racine du dépôt, après installation des dé
 PYTHONPATH=src .venv/bin/python -m unittest discover -s tests -v
 ```
 
-Les vingt-sept tests couvrent également l’ordre des étapes du lanceur, le blocage après échec, le nettoyage Kafka et le refus d’un CSV incorrect avant publication. Ils couvrent la précision et l'identité des événements producer, la validation consumer et l'absence de confirmation d'offset lorsque le message, sa clé ou sa sortie sont en échec. Kafka, Spark et le CSV Kaggle ne sont pas requis.
+Les trente-cinq tests couvrent également l’ordre des étapes du lanceur, le blocage après échec, le nettoyage Kafka et le refus d’un CSV incorrect avant publication. Ils couvrent la précision et l'identité des événements producer, la validation consumer et l'absence de confirmation d'offset lorsque le message, sa clé ou sa sortie sont en échec. Kafka, Spark et le CSV Kaggle ne sont pas requis.
 
 Les contrôles de déploiement ajoutent sept tests : configuration absente, mauvaise branche/événement, commit exact, attente de CI, jobs ignorés et refus de revenir à un ancien succès après un échec plus récent. Ils ne nécessitent aucun accès Databricks.
 
@@ -23,6 +23,14 @@ BANKING_SPARK_APP=tests/integration/replay_resume_check.py bash scripts/bronze.s
 ```
 
 Ce scénario utilise un CSV synthétique de quatre lignes et les véritables plages du producteur, curseur, builders Spark/Delta Silver/Gold/étoile. Il remplace l'adaptateur shell/Kafka par des écritures Bronze utilisant `bronze_frame`, sous un dossier unique de `data/integration/`. Il initialise depuis deux faits vérifiés, interrompt après livraison de la ligne 3, rejoue cette ligne, poursuit à 4 et vérifie cinq lignes Bronze pour quatre faits uniques, les montants, la quarantaine vide et une relance sans publication. Il ne teste pas le broker Kafka ni une coupure système pendant une écriture de fichier. Le test Kafka Bronze reste distinct. Ce scénario est également exécuté en CI, après le parcours incrémental existant.
+
+## Import d’un export S3 / volume
+
+```bash
+BANKING_SPARK_APP=tests/integration/import_star_check.py bash scripts/bronze.sh
+```
+
+Le vrai notebook est exécuté avec Spark/Delta sur un export synthétique de deux transactions. Les widgets et la résolution du stockage S3/volume sont simulés ; aucune connexion cloud n'est établie. Il vérifie les empreintes et les totaux avant écriture, la conservation des Decimal, les clés et références, la reprise sans écrasement et le refus d'une table divergente. Le scénario est exécuté en CI. Huit tests unitaires supplémentaires couvrent la résolution sécurisée des chemins, les métadonnées et empreintes. Voir [le guide S3](s3-import.md) pour les contrôles à réaliser dans le workspace avant un import distant complet.
 
 ## Tests Kafka
 
@@ -144,20 +152,20 @@ Les journaux, `report.json` et les mesures ponctuelles `resources.json` de cette
 - Relancer Silver et Gold sans changement d'entrée conserve les lignes métier et les indicateurs, tout en créant de nouvelles versions Delta.
 - Le test étoile simule une interruption avant publication du manifeste et vérifie que les versions précédemment publiées restent lisibles.
 
-L'interruption pendant une écriture Bronze, la perte de rétention Kafka et un benchmark du dataset complet restent à tester. Tous ces tests peuvent s'exécuter localement ; la CI exécute les tests unitaires, `pipeline_check.py` et `replay_resume_check.py`. Les scénarios détaillés d'interruption et les tests Kafka restent locaux.
+L'interruption pendant une écriture Bronze, la perte de rétention Kafka et un benchmark du dataset complet restent à tester. Tous ces tests peuvent s'exécuter localement ; la CI exécute les tests unitaires, `pipeline_check.py`, `replay_resume_check.py` et `import_star_check.py`. Les scénarios détaillés d'interruption et les tests Kafka restent locaux.
 
 ## GitHub Actions
 
 Le workflow [CI](../.github/workflows/ci.yml) se déclenche à chaque push, à chaque ouverture ou mise à jour d'une pull request, et manuellement via `workflow_dispatch`. Les deux jobs utilisent Ubuntu 24.04 et Python 3.13, avec lecture seule du dépôt et actions figées par SHA.
 
-1. **Unit tests (Python 3.13)** installe `requirements.txt`, vérifie les dépendances et exécute les vingt-sept tests unitaires sans Spark ni Kafka. Ce job est limité à cinq minutes.
+1. **Unit tests (Python 3.13)** installe `requirements.txt`, vérifie les dépendances et exécute les trente-cinq tests unitaires sans Spark ni Kafka. Ce job est limité à cinq minutes.
 2. **Incremental pipeline (Spark / Delta)** attend la réussite du premier job, configure Java 17 Temurin, crée `.venv` et installe `requirements-streaming.txt`. Il est limité à quinze minutes et exécute :
 
 ```bash
 BANKING_SPARK_APP=tests/integration/pipeline_check.py bash scripts/bronze.sh
 ```
 
-Une seconde étape exécute `replay_resume_check.py` pour couvrir le curseur CSV et sa reprise après livraison partielle.
+Une seconde étape exécute `replay_resume_check.py` pour couvrir le curseur CSV et sa reprise après livraison partielle. Une troisième exécute `import_star_check.py` pour tester le notebook d’import sur un export synthétique isolé.
 
 Le scénario `pipeline_check.py` utilise les deux lignes synthétiques du dépôt et deux événements supplémentaires construits par le test. Il crée les lignes Bronze via le même `bronze_frame` que l'ingestion, sans connecter de broker. Il vérifie les totaux attendus à chaque phase (2→3→2 faits), la parité avec des reconstructions complètes Gold/étoile, les quatre références aux dimensions et la conservation des dimensions historiques. Une relance inchangée doit laisser les versions de toutes les tables et le manifeste identiques. Un rejeu métier doit être dédupliqué ; un conflit doit retirer la transaction de Silver, des agrégats Gold et des faits, et placer ses deux occurrences en quarantaine.
 

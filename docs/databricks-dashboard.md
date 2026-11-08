@@ -26,13 +26,15 @@ Ces fichiers sont ignorés par Git. Ne pas utiliser un export incomplet ou sans 
 
 ## 2. Charger les fichiers dans Databricks Free Edition
 
+Alternative sans téléversement manuel : [import depuis S3 via un volume externe](s3-import.md). La procédure ci-dessous décrit le transfert initial vers un volume managé.
+
 Dans **Catalog**, choisir un catalogue accessible en écriture et créer un schéma de dépôt, par exemple `paysim_uploads`, puis un volume managé, par exemple `exports`. Dans ce volume, créer un dossier portant l'identifiant de l'export et y téléverser les **cinq fichiers** du même dossier local. Garder les noms inchangés.
 
 Le chemin obtenu ressemble à `/Volumes/<catalogue>/paysim_uploads/exports/<identifiant>` ; les éléments entre chevrons doivent être remplacés par les valeurs réelles. Ne pas envoyer les fichiers au dépôt GitHub. Voir [les fichiers dans les volumes Unity Catalog](https://docs.databricks.com/aws/en/volumes/volume-files).
 
 ## 3. Importer les tables et préparer la vue
 
-Importer [01_import_star.py](../databricks/notebooks/01_import_star.py) dans Workspace comme notebook Python et sélectionner le calcul serverless disponible. Renseigner les widgets :
+Déployer le notebook [01_import_star.py](../databricks/notebooks/01_import_star.py) et son module voisin [_import_support.py](../databricks/notebooks/_import_support.py) dans le même dossier Workspace (ou utiliser DAB). Ouvrir le notebook Python et sélectionner le calcul serverless disponible. Renseigner les widgets :
 
 - `export_path` : chemin complet du dossier sous `/Volumes/` contenant les cinq fichiers.
 - `catalog` : catalogue cible accessible en écriture, proposé par défaut à partir du catalogue courant.

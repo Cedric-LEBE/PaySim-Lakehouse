@@ -61,6 +61,7 @@ jobs:
       DATABRICKS_CLIENT_ID: ${{ vars.DATABRICKS_CLIENT_ID }}
       DATABRICKS_WAREHOUSE_ID: ${{ vars.DATABRICKS_WAREHOUSE_ID }}
       BUNDLE_VAR_warehouse_id: ${{ vars.DATABRICKS_WAREHOUSE_ID }}
+      BUNDLE_VAR_s3_volume: ${{ vars.DATABRICKS_S3_VOLUME || '' }}
       BUNDLE_VAR_catalog: ${{ vars.DATABRICKS_CATALOG || 'workspace' }}
       BUNDLE_VAR_schema: ${{ vars.DATABRICKS_SCHEMA || 'paysim_20261106t220939z_9c554717' }}
       BUNDLE_VAR_export_path: ${{ vars.DATABRICKS_EXPORT_PATH || '/Volumes/workspace/paysim_uploads/exports/20261106T220939Z-9c554717/' }}
