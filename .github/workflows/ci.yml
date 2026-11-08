@@ -78,3 +78,8 @@ jobs:
         env:
           BANKING_SPARK_APP: tests/integration/pipeline_check.py
         run: bash scripts/bronze.sh
+
+      - name: Run CSV resume and interruption scenario
+        env:
+          BANKING_SPARK_APP: tests/integration/replay_resume_check.py
+        run: bash scripts/bronze.sh

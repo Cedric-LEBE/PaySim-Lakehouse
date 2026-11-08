@@ -35,13 +35,18 @@ def event(row, dataset, number):
             'dataset_id': dataset, 'source_row': number, 'transaction': data}
 
 
-def records(path, dataset, limit):
+def records(path, dataset, limit, start_row=1):
+    """Yield up to limit events, preserving absolute CSV row numbers on resume."""
+    if start_row < 1 or limit < 1:
+        raise ValueError('start_row et limit doivent être positifs')
     with path.open(newline='', encoding='utf-8-sig') as stream:
         reader = csv.DictReader(stream)
         if reader.fieldnames is None or len(reader.fieldnames) != len(COLUMNS) or set(reader.fieldnames) != set(COLUMNS):
             raise ValueError('En-tête CSV incompatible avec PaySim')
         for number, row in enumerate(reader, 1):
-            if number > limit:
+            if number < start_row:
+                continue
+            if number >= start_row + limit:
                 break
             yield event(row, dataset, number)
 
@@ -54,10 +59,11 @@ def main():
     parser.add_argument('--topic', default='banking.transactions.raw')
     parser.add_argument('--rate', type=float, default=10)
     parser.add_argument('--max-messages', type=int, default=100)
+    parser.add_argument('--start-row', type=int, default=1, help='Première ligne de données, numérotation à partir de 1')
     parser.add_argument('--dry-run', action='store_true')
     args = parser.parse_args()
-    if not math.isfinite(args.rate) or args.rate <= 0 or args.max_messages <= 0 or not args.dataset_id.strip():
-        parser.error('rate et max-messages doivent être positifs ; dataset-id non vide')
+    if not math.isfinite(args.rate) or args.rate <= 0 or args.max_messages <= 0 or args.start_row <= 0 or not args.dataset_id.strip():
+        parser.error('rate, max-messages et start-row doivent être positifs ; dataset-id non vide')
     producer = None
     delivered = 0
     failures = []
@@ -79,7 +85,7 @@ def main():
                 raise ValueError(f'Topic absent ou inaccessible : {args.topic}')
         count = 0
         next_send = time.monotonic()
-        for item in records(args.csv, args.dataset_id, args.max_messages):
+        for item in records(args.csv, args.dataset_id, args.max_messages, args.start_row):
             payload = json.dumps(item, allow_nan=False)
             if args.dry_run:
                 print(payload)
@@ -91,6 +97,8 @@ def main():
                 producer.produce(args.topic, key=item['transaction']['nameOrig'], value=payload, on_delivery=acknowledged)
                 next_send = time.monotonic() + 1 / args.rate
             count += 1
+        if count != args.max_messages:
+            raise ValueError(f'CSV trop court : {count}/{args.max_messages} événements lus')
         if producer:
             pending = producer.flush(20)
             if pending or failures or delivered != count:

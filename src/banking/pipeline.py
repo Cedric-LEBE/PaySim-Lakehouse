@@ -20,15 +20,25 @@ CSV = Path('data/raw/PS_20174392719_1491204439457_log.csv')
 SHA256 = DATASET.removeprefix('paysim-sha256-')
 
 
-def preflight(csv, limit):
+def preflight(csv, limit, start_row=None):
     """Validate the exact source and requested prefix before any publication."""
     with csv.open('rb') as stream:
         digest = hashlib.file_digest(stream, 'sha256').hexdigest()
     if digest != SHA256:
         raise ValueError('Empreinte CSV incorrecte : aucun événement publié')
-    count = sum(1 for _ in records(csv, DATASET, limit))
-    if count != limit:
-        raise ValueError(f'CSV trop court : {count} lignes disponibles pour {limit} demandées')
+    first = start_row or 1
+    count = 0
+    payload_bytes = 0
+    for item in records(csv, DATASET, limit - first + 1, first):
+        count += 1
+        # A conservative total cap also bounds a batch with all keys in one partition.
+        if start_row is not None:
+            payload_bytes += (len(json.dumps(item, allow_nan=False).encode('utf-8'))
+                              + len(item['transaction']['nameOrig'].encode('utf-8')) + 1024)
+            if payload_bytes > 128 * 1024 * 1024:
+                raise ValueError('Lot supérieur à 128 Mio estimés : réduire --batch-rows')
+    if count != limit - first + 1:
+        raise ValueError(f'CSV trop court : {count} lignes disponibles pour {limit - first + 1} demandées à partir de {first}')
     manifest = ROOT / 'data/gold/star/_snapshot.json'
     if manifest.exists() and json.loads(manifest.read_text())['counts']['fact_transaction'] > limit:
         raise ValueError('Volume inférieur à l’étoile publiée : choisir un volume égal ou supérieur')
@@ -50,11 +60,11 @@ def execute(command, log, env):
             raise
 
 
-def run_pipeline(csv, limit, rate, batch, directory):
+def run_pipeline(csv, limit, rate, batch, directory, start_row=None):
     directory.mkdir(parents=True, exist_ok=False)
     started = time.monotonic()
     report = {'status': 'running', 'max_messages': limit, 'rate': rate,
-              'max_offsets': batch, 'csv': str(csv), 'stages': []}
+              'max_offsets': batch, 'csv': str(csv), 'start_row': start_row or 1, 'stages': []}
     env = {**os.environ, 'PYTHONPATH': str(ROOT / 'src')}
     # Select every Spark application explicitly, irrespective of the calling shell.
     env.pop('BANKING_SPARK_APP', None)
@@ -80,7 +90,10 @@ def run_pipeline(csv, limit, rate, batch, directory):
         entry = {'name': 'preflight', 'exit_code': 1}
         report['stages'].append(entry)
         try:
-            preflight(csv, limit)
+            if start_row is None:
+                preflight(csv, limit)
+            else:
+                preflight(csv, limit, start_row)
             entry['exit_code'] = 0
         finally:
             entry['seconds'] = round(time.monotonic() - begin, 2)
@@ -88,16 +101,20 @@ def run_pipeline(csv, limit, rate, batch, directory):
         kafka_active = True  # Also clean up a partially successful start.
         stage('kafka-start', ['bash', 'scripts/kafka.sh', 'start'])
         stage('kafka-topic', ['bash', 'scripts/kafka.sh', 'topic'])
+        if start_row is not None:
+            # Drain any delivery left by an interrupted attempt before publishing again.
+            stage('bronze-drain', ['bash', 'scripts/bronze.sh', '--max-offsets', str(batch)])
         stage('producer', [str(ROOT / '.venv/bin/python'), '-m', 'banking.producer',
                           '--csv', str(csv), '--dataset-id', DATASET,
-                          '--max-messages', str(limit), '--rate', str(rate)])
+                          '--max-messages', str(limit - (start_row or 1) + 1), '--rate', str(rate),
+                          '--start-row', str(start_row or 1)])
         stage('bronze', ['bash', 'scripts/bronze.sh', '--max-offsets', str(batch)])
         stage('kafka-stop', ['bash', 'scripts/kafka.sh', 'stop'])
         kafka_active = False
         for layer in ('silver', 'gold', 'star'):
             stage(layer, ['bash', f'scripts/{layer}.sh'])
         stage('verify', ['env', 'BANKING_SPARK_APP=tests/integration/replay_check.py',
-                         'bash', 'scripts/bronze.sh', '--max-messages', str(limit)])
+                         'bash', 'scripts/bronze.sh', '--max-messages', str(limit), '--csv', str(csv)])
         report['status'] = 'passed'
     except (Exception, KeyboardInterrupt) as error:
         report['status'] = 'failed'
@@ -122,11 +139,13 @@ def main():
     parser.add_argument('--max-messages', type=int, default=10000)
     parser.add_argument('--rate', type=float, default=100)
     parser.add_argument('--max-offsets', type=int, default=1000)
+    parser.add_argument('--resume', action='store_true', help='Reprendre après le dernier lot validé ; max-messages est le total cible')
+    parser.add_argument('--batch-rows', type=int, default=50000, help='Nouvelles lignes par lot en mode resume (maximum 50000)')
     parser.add_argument('--csv', type=Path, default=CSV)
     args = parser.parse_args()
     import math
-    if args.max_messages <= 0 or args.max_offsets <= 0 or not math.isfinite(args.rate) or args.rate <= 0:
-        parser.error('max-messages, max-offsets et rate doivent être positifs et finis')
+    if args.max_messages <= 0 or args.max_offsets <= 0 or not 1 <= args.batch_rows <= 50000 or not math.isfinite(args.rate) or args.rate <= 0:
+        parser.error('max-messages, max-offsets et rate doivent être positifs et finis ; batch-rows entre 1 et 50000')
     csv = (ROOT / args.csv).resolve()
     run_id = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ') + '-' + uuid.uuid4().hex[:8]
     runs = ROOT / 'data/runs'
@@ -136,6 +155,14 @@ def main():
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             print('ERREUR: un pipeline est déjà en cours.', file=sys.stderr)
+            return 1
+        if args.resume:
+            from banking.replay import resume
+            return resume(csv, args.max_messages, args.rate, args.max_offsets,
+                          args.batch_rows, runs / run_id)
+        cursor = ROOT / 'data/checkpoints/csv-replay.json'
+        if cursor.exists():
+            print('ERREUR: curseur CSV existant ; utiliser --resume pour conserver sa progression.', file=sys.stderr)
             return 1
         return run_pipeline(csv, args.max_messages, args.rate, args.max_offsets, runs / run_id)
 

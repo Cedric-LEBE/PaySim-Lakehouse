@@ -15,3 +15,14 @@ class ProducerTests(unittest.TestCase):
         for key, value in [('amount', 'NaN'), ('amount', '-1'), ('isFraud', '2'), ('type', 'UNKNOWN')]:
             with self.subTest(key=key, value=value), self.assertRaises(ValueError):
                 event({**row, key: value}, 'x', 1)
+
+    def test_resumed_range_preserves_absolute_identity(self):
+        source = Path('tests/fixtures/paysim_synthetic.csv')
+        full = list(records(source, 'synthetic-v1', 2))
+        tail = list(records(source, 'synthetic-v1', 1, start_row=2))
+        self.assertEqual(tail, full[1:])
+        self.assertEqual(tail[0]['source_row'], 2)
+        self.assertEqual(list(records(source, 'synthetic-v1', 1, start_row=3)), [])
+        for start, limit in [(0, 1), (1, 0)]:
+            with self.assertRaises(ValueError):
+                list(records(source, 'synthetic-v1', limit, start_row=start))

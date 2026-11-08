@@ -80,6 +80,32 @@ Un verrou empêche deux exécutions simultanées du lanceur sur macOS/Linux. Il 
 
 Chaque exécution conserve sous `data/runs/` un dossier avec un journal par commande et `report.json` : paramètres, état final, erreur éventuelle, durées et codes de sortie. Un code de sortie non nul signale l'échec. Consulter le bilan et le journal de l'étape concernée avant de relancer la même commande. Des événements peuvent déjà avoir été publiés lors d'un échec ; Silver déduplique le rejeu avec le même dataset ID. Les durées sont des temps écoulés, pas une mesure de mémoire ou un benchmark du dataset complet.
 
+## Reprise CSV par lots
+
+Depuis le préfixe existant de 250 000 lignes :
+
+```bash
+bash scripts/pipeline.sh --resume --max-messages 500000 --batch-rows 50000 --rate 1000 --max-offsets 5000
+```
+
+`--max-messages` reste une cible **totale** : cet exemple ajoute 250 000 lignes, en cinq lots de 50 000. `--batch-rows` vaut 50 000 par défaut et ne peut pas dépasser cette valeur. Chaque lot est également plafonné à 128 Mio estimés (JSON UTF-8, clé et marge de 1 Kio par message), même si toutes les clés aboutissent dans une seule partition. Ce plafond laisse une marge face à la rétention configurée de 256 Mio par partition ; ne pas réduire cette rétention pendant une reprise. Le contrôle est effectué avant tout envoi du lot.
+
+Au premier lancement, le nombre de faits du manifeste étoile est une proposition de point de départ, pas une preuve : le lanceur exécute d'abord le rapprochement complet du préfixe CSV avec Silver/Gold/étoile. Un échec empêche la création du curseur et toute publication Kafka. Sur un environnement neuf, la progression commence à zéro. Le CSV doit avoir l'empreinte PaySim de référence.
+
+`data/checkpoints/csv-replay.json` lie la progression au chemin CSV, au dataset et au dépôt. Il conserve la dernière ligne entièrement validée, le manifeste étoile correspondant et, avant publication, la plage en attente. Son remplacement est atomique après écriture et synchronisation du fichier. Les numéros `source_row` restent absolus : la ligne 250 001 conserve la même identité qu'un rejeu complet.
+
+Les 250 000 transactions ajoutées ne sont pas lancées par la préparation ou les tests : il faut exécuter la commande ci-dessus.
+
+Chaque lot démarre Kafka, draine d'abord les messages disponibles vers Bronze, publie uniquement sa plage, ingère Bronze, arrête Kafka, met à jour les couches incrémentales puis rapproche le **préfixe cumulé entier** avec le CSV. Le drainage permet de récupérer les envois d'une tentative interrompue avant de les republier. Le curseur n'avance qu'après succès de toutes ces étapes. Relancer exactement la même commande reprend le lot en attente, même si des écritures Delta avaient déjà réussi. Bronze peut contenir des rejeux ; Silver et les faits doivent rester uniques.
+
+Une relance à cible déjà atteinte ne publie rien. Une cible inférieure à la progression ou au lot en attente est refusée. Une fois le curseur créé, utiliser `--resume` : le mode de rejeu historique sans curseur est bloqué. Ne pas lancer le producteur ni les traitements individuels en parallèle ; le verrou du lanceur ne bloque pas ces commandes directes. Un manifeste étoile modifié hors du lanceur entre deux lots validés provoque un refus pour éviter une désynchronisation silencieuse.
+
+Les dossiers de lot et leurs `report.json` sont conservés sous `data/runs/<exécution>/<première>-<dernière>/`. La vérification initiale écrit `bootstrap-verify.log` à la racine du dossier d'exécution. Conserver le curseur, les tables, les journaux Delta/CDF nécessaires et le checkpoint Bronze ensemble. Ne pas supprimer ni éditer un état pour forcer une reprise.
+
+La livraison est **au moins une fois**, avec déduplication métier ; elle n'est pas une transaction globale Kafka/Delta/curseur. Une interruption dépassant la rétention de 24 h peut rendre des offsets indisponibles : Bronze échoue alors avec `failOnDataLoss=true`. Le mécanisme refuse de masquer cette perte et ne reconstruit pas automatiquement un checkpoint expiré.
+
+Le producteur sait aussi lire une plage via `--start-row` (1 par défaut) et `--max-messages` (**nombre** de lignes dans ce cas). Il ne tient pas de curseur autonome : utiliser le lanceur pour la progression validée. La lecture saute les lignes précédentes en parcourant le CSV, sans index de position. Les contrôles de chaque lot relisent tout le préfixe ; le coût augmente donc avec le volume. La vérification des comptes utilise Spark au lieu d'un ensemble Python de tous les comptes, mais le dataset complet reste à mesurer. Vérifier l'espace disque avant de l'étendre : CSV, Kafka, tables techniques, historique Delta, journaux et fichiers temporaires s'additionnent.
+
 ## Traitements et options
 
 Tous les lanceurs Spark réutilisent `scripts/bronze.sh`. Les chemins ci-dessous sont relatifs à la racine du dépôt.

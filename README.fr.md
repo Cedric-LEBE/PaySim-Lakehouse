@@ -96,6 +96,14 @@ Les journaux et durées sont conservés dans `data/runs/<exécution>/`, avec un 
 
 Silver utilise désormais un traitement incrémental : première initialisation complète, puis lecture des seuls nouveaux commits Bronze et MERGE Delta. Les tables et l'état de progression doivent être conservés ensemble. Les agrégats Gold et l'étoile sont également mis à jour depuis le CDF Silver. Les dimensions conservent leurs membres historiques et les faits suivent les ajouts, corrections et retraits Silver. Voir [Silver incrémental](docs/operations.md#silver-incrémental).
 
+Pour passer du préfixe validé de 250 000 lignes à **500 000 lignes au total** sans republier le début :
+
+```bash
+bash scripts/pipeline.sh --resume --max-messages 500000 --batch-rows 50000 --rate 1000 --max-offsets 5000
+```
+
+Le premier lancement vérifie le préfixe existant. Le curseur CSV avance après chaque lot validé jusqu’à l’étoile, avec rapprochement complet au CSV. Une interruption peut entraîner le rejeu du lot en cours dans Bronze ; Silver conserve un seul événement métier. Conserver `data/checkpoints/csv-replay.json` avec les tables et checkpoints. Voir [la reprise par lots](docs/operations.md#reprise-csv-par-lots).
+
 ## Dashboards Databricks
 
 Un export cohérent des quatre tables est disponible pour préparer une restitution dans Databricks Free Edition :
@@ -137,7 +145,7 @@ Les tests unitaires ne nécessitent ni Kafka ni Spark :
 PYTHONPATH=src .venv/bin/python -m unittest discover -s tests -v
 ```
 
-Le workflow [GitHub Actions CI](.github/workflows/ci.yml) exécute les dix-huit tests unitaires, puis un scénario d'intégration synthétique Bronze → Silver → Gold → étoile, sur Ubuntu avec Python 3.13 et Java 17. Il se déclenche sur push, pull request et lancement manuel. Le scénario vérifie les rejeux et le retrait d'une transaction en conflit sans Kafka, Docker, CSV Kaggle ni secrets cloud.
+Le workflow [GitHub Actions CI](.github/workflows/ci.yml) exécute les vingt-sept tests unitaires, puis un scénario d'intégration synthétique Bronze → Silver → Gold → étoile, sur Ubuntu avec Python 3.13 et Java 17. Il se déclenche sur push, pull request et lancement manuel. Le scénario vérifie les rejeux et le retrait d'une transaction en conflit sans Kafka, Docker, CSV Kaggle ni secrets cloud.
 
 La [documentation des tests](docs/testing.md) donne les commandes d'intégration, leurs prérequis et les données utilisées. Certains tests attendent précisément l'échantillon de 100 transactions ci-dessus.
 

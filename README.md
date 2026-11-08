@@ -103,6 +103,14 @@ The larger validated run used:
 bash scripts/pipeline.sh --max-messages 250000 --rate 1000 --max-offsets 5000
 ```
 
+To extend that validated prefix without republishing rows 1–250,000:
+
+```bash
+bash scripts/pipeline.sh --resume --max-messages 500000 --batch-rows 50000 --rate 1000 --max-offsets 5000
+```
+
+In resume mode, `--max-messages` is the **cumulative target**, not the number of new events. The runner validates the existing published prefix once, then records CSV progress only after each range passes Bronze → Silver → Gold → star and full CSV reconciliation. Interrupted ranges can be replayed into Bronze; Silver deduplicates their stable event IDs. Keep `data/checkpoints/csv-replay.json` with the lakehouse. The existing 250,000-row reference is unchanged until you run this command. The full dataset has not been benchmarked.
+
 See [operations](docs/operations.md) and [recovery guarantees](docs/architecture.md). No cloud resources are created by these commands.
 
 ## Databricks dashboards and DAB

@@ -10,9 +10,19 @@ Exécuter les commandes depuis la racine du dépôt, après installation des dé
 PYTHONPATH=src .venv/bin/python -m unittest discover -s tests -v
 ```
 
-Les dix-huit tests couvrent également l’ordre des étapes du lanceur, le blocage après échec, le nettoyage Kafka et le refus d’un CSV incorrect avant publication. Ils couvrent la précision et l'identité des événements producer, la validation consumer et l'absence de confirmation d'offset lorsque le message, sa clé ou sa sortie sont en échec. Kafka, Spark et le CSV Kaggle ne sont pas requis.
+Les vingt-sept tests couvrent également l’ordre des étapes du lanceur, le blocage après échec, le nettoyage Kafka et le refus d’un CSV incorrect avant publication. Ils couvrent la précision et l'identité des événements producer, la validation consumer et l'absence de confirmation d'offset lorsque le message, sa clé ou sa sortie sont en échec. Kafka, Spark et le CSV Kaggle ne sont pas requis.
 
 Les contrôles de déploiement ajoutent sept tests : configuration absente, mauvaise branche/événement, commit exact, attente de CI, jobs ignorés et refus de revenir à un ancien succès après un échec plus récent. Ils ne nécessitent aucun accès Databricks.
+
+Les neuf contrôles ajoutés pour la reprise couvrent les plages CSV et identités absolues, l'initialisation vérifiée du curseur, les lots successifs et relances sans publication, l'échec d'initialisation, le rejeu d'une plage en attente même après publication des tables, le refus d'un CSV/manifeste changé ou d'un checkpoint manquant, le plafond estimé de publication et l'ordre drainage → envoi → vérification cumulée. Les étapes externes sont simulées dans ces tests unitaires.
+
+## Reprise CSV : intégration isolée
+
+```bash
+BANKING_SPARK_APP=tests/integration/replay_resume_check.py bash scripts/bronze.sh
+```
+
+Ce scénario utilise un CSV synthétique de quatre lignes et les véritables plages du producteur, curseur, builders Spark/Delta Silver/Gold/étoile. Il remplace l'adaptateur shell/Kafka par des écritures Bronze utilisant `bronze_frame`, sous un dossier unique de `data/integration/`. Il initialise depuis deux faits vérifiés, interrompt après livraison de la ligne 3, rejoue cette ligne, poursuit à 4 et vérifie cinq lignes Bronze pour quatre faits uniques, les montants, la quarantaine vide et une relance sans publication. Il ne teste pas le broker Kafka ni une coupure système pendant une écriture de fichier. Le test Kafka Bronze reste distinct. Ce scénario est également exécuté en CI, après le parcours incrémental existant.
 
 ## Tests Kafka
 
@@ -96,7 +106,7 @@ BANKING_SPARK_APP=tests/integration/replay_check.py bash scripts/bronze.sh --max
 
 Exécuter les étapes successivement et s'arrêter en cas d'échec. Conserver la table Bronze et son checkpoint existants. Le producer repart du début ; Silver doit conserver exactement 10 000 identités distinctes. Les comptes Bronze, doublons et quarantaine dépendent des publications antérieures.
 
-Le contrôle compare chaque champ métier Silver au CSV, rapproche les agrégats globaux/par type/par étape et vérifie les identités et totaux des faits ainsi que les effectifs des dimensions publiées. Les membres attendus du CSV doivent être présents ; des membres historiques supplémentaires sont autorisés dans les dimensions incrémentales. Il lit les tables sans les modifier. Son paramètre `--max-messages` permet de choisir un autre préfixe du CSV. Le CSV est lu ligne par ligne et les transactions Silver sont transférées vers Python une partition à la fois après tri par ligne source. Les agrégats et les identifiants de comptes distincts restent en mémoire ; toutes les transactions ne sont plus collectées simultanément.
+Le contrôle compare chaque champ métier Silver au CSV, rapproche les agrégats globaux/par type/par étape et vérifie les identités et totaux des faits ainsi que les effectifs des dimensions publiées. Les membres attendus du CSV doivent être présents ; des membres historiques supplémentaires sont autorisés dans les dimensions incrémentales. Il lit les tables sans les modifier. Son paramètre `--max-messages` permet de choisir un autre préfixe du CSV. Le CSV est lu ligne par ligne et les transactions Silver sont transférées vers Python une partition à la fois après répartition par plage (128 partitions demandées) et tri par ligne source. Les petits agrégats par type/étape restent en Python ; les contrôles de comptes distincts sont exécutés dans Spark. Toutes les transactions ne sont plus collectées simultanément.
 
 Résultats attendus : 10 000 transactions, montant total 1 035 466 899,49, 68 fraudes (0,68 %) et montant frauduleux 36 275 527,43. L'étoile contient 10 000 faits, 5 types, 7 heures relatives et 16 397 comptes. Les tests `gold_check.py` et `star_check.py` ci-dessus restent dédiés au préfixe de 100 lignes ; utiliser `replay_check.py` pour ce périmètre élargi.
 
@@ -134,20 +144,22 @@ Les journaux, `report.json` et les mesures ponctuelles `resources.json` de cette
 - Relancer Silver et Gold sans changement d'entrée conserve les lignes métier et les indicateurs, tout en créant de nouvelles versions Delta.
 - Le test étoile simule une interruption avant publication du manifeste et vérifie que les versions précédemment publiées restent lisibles.
 
-L'interruption pendant une écriture Bronze, la perte de rétention Kafka et un benchmark du dataset complet restent à tester. Tous ces tests peuvent s'exécuter localement ; la CI exécute les tests unitaires et `pipeline_check.py`. Les scénarios détaillés d'interruption et les tests Kafka restent locaux.
+L'interruption pendant une écriture Bronze, la perte de rétention Kafka et un benchmark du dataset complet restent à tester. Tous ces tests peuvent s'exécuter localement ; la CI exécute les tests unitaires, `pipeline_check.py` et `replay_resume_check.py`. Les scénarios détaillés d'interruption et les tests Kafka restent locaux.
 
 ## GitHub Actions
 
 Le workflow [CI](../.github/workflows/ci.yml) se déclenche à chaque push, à chaque ouverture ou mise à jour d'une pull request, et manuellement via `workflow_dispatch`. Les deux jobs utilisent Ubuntu 24.04 et Python 3.13, avec lecture seule du dépôt et actions figées par SHA.
 
-1. **Unit tests (Python 3.13)** installe `requirements.txt`, vérifie les dépendances et exécute les dix-huit tests unitaires sans Spark ni Kafka. Ce job est limité à cinq minutes.
+1. **Unit tests (Python 3.13)** installe `requirements.txt`, vérifie les dépendances et exécute les vingt-sept tests unitaires sans Spark ni Kafka. Ce job est limité à cinq minutes.
 2. **Incremental pipeline (Spark / Delta)** attend la réussite du premier job, configure Java 17 Temurin, crée `.venv` et installe `requirements-streaming.txt`. Il est limité à quinze minutes et exécute :
 
 ```bash
 BANKING_SPARK_APP=tests/integration/pipeline_check.py bash scripts/bronze.sh
 ```
 
-Le scénario utilise les deux lignes synthétiques du dépôt et deux événements supplémentaires construits par le test. Il crée les lignes Bronze via le même `bronze_frame` que l'ingestion, sans connecter de broker. Il vérifie les totaux attendus à chaque phase (2→3→2 faits), la parité avec des reconstructions complètes Gold/étoile, les quatre références aux dimensions et la conservation des dimensions historiques. Une relance inchangée doit laisser les versions de toutes les tables et le manifeste identiques. Un rejeu métier doit être dédupliqué ; un conflit doit retirer la transaction de Silver, des agrégats Gold et des faits, et placer ses deux occurrences en quarantaine.
+Une seconde étape exécute `replay_resume_check.py` pour couvrir le curseur CSV et sa reprise après livraison partielle.
+
+Le scénario `pipeline_check.py` utilise les deux lignes synthétiques du dépôt et deux événements supplémentaires construits par le test. Il crée les lignes Bronze via le même `bronze_frame` que l'ingestion, sans connecter de broker. Il vérifie les totaux attendus à chaque phase (2→3→2 faits), la parité avec des reconstructions complètes Gold/étoile, les quatre références aux dimensions et la conservation des dimensions historiques. Une relance inchangée doit laisser les versions de toutes les tables et le manifeste identiques. Un rejeu métier doit être dédupliqué ; un conflit doit retirer la transaction de Silver, des agrégats Gold et des faits, et placer ses deux occurrences en quarantaine.
 
 Aucun service Docker, dataset Kaggle ou secret cloud n'est utilisé. Spark et les dépendances Maven sont téléchargés si nécessaire ; le lanceur conserve ses limites locales de deux threads et 768 Mio de heap. Les seules dépendances mises en cache par le workflow sont celles de pip ; le cache Ivy reste propre à l'exécution GitHub. Les sorties isolées sous `data/integration/` restent hors Git. Les journaux de l'étape sont consultables dans Actions.
 
