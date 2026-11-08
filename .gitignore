@@ -16,3 +16,7 @@ spark-warehouse/
 derby.log
 metastore_db/
 .venv.nosync/
+.databricks/
+.bundle/
+
+.databrickscfg

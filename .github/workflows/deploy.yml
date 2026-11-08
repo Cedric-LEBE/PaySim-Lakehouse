@@ -1,0 +1,88 @@
+name: Deploy Databricks bundle
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: databricks-ci-deployment
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify configuration and exact-commit CI
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      DATABRICKS_CD_ENABLED: ${{ vars.DATABRICKS_CD_ENABLED }}
+      DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST }}
+      DATABRICKS_CLIENT_ID: ${{ vars.DATABRICKS_CLIENT_ID }}
+      DATABRICKS_WAREHOUSE_ID: ${{ vars.DATABRICKS_WAREHOUSE_ID }}
+    steps:
+      - name: Require a manual main deployment
+        env:
+          SELECTED_REF: ${{ github.ref }}
+        run: test "$SELECTED_REF" = refs/heads/main
+      - name: Check out selected commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+      - name: Check configuration and wait for CI
+        run: python scripts/ci/check_deploy_ready.py
+
+  deploy:
+    name: Validate and deploy definitions only
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: databricks-ci
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      DATABRICKS_CD_ENABLED: ${{ vars.DATABRICKS_CD_ENABLED }}
+      DATABRICKS_AUTH_TYPE: github-oidc
+      DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST }}
+      DATABRICKS_CLIENT_ID: ${{ vars.DATABRICKS_CLIENT_ID }}
+      DATABRICKS_WAREHOUSE_ID: ${{ vars.DATABRICKS_WAREHOUSE_ID }}
+      BUNDLE_VAR_warehouse_id: ${{ vars.DATABRICKS_WAREHOUSE_ID }}
+      BUNDLE_VAR_catalog: ${{ vars.DATABRICKS_CATALOG || 'workspace' }}
+      BUNDLE_VAR_schema: ${{ vars.DATABRICKS_SCHEMA || 'paysim_20261106t220939z_9c554717' }}
+      BUNDLE_VAR_export_path: ${{ vars.DATABRICKS_EXPORT_PATH || '/Volumes/workspace/paysim_uploads/exports/20261106T220939Z-9c554717/' }}
+    steps:
+      - name: Check out the same verified commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+      - name: Install pinned Databricks CLI
+        uses: databricks/setup-cli@9625fdde9ba2607df0087e0d3ec7449198bf2180
+        with:
+          version: 1.24.0
+      - name: Verify generated dashboard
+        run: |
+          python scripts/build_dashboard.py
+          git diff --exit-code -- databricks/dashboards/paysim.lvdash.json
+      - name: Verify federated authentication
+        run: databricks current-user me
+      - name: Validate bundle
+        run: databricks bundle validate --target ci --strict
+      - name: Recheck main and CI immediately before deployment
+        run: python scripts/ci/check_deploy_ready.py --timeout 0
+      - name: Deploy dashboard and job definitions
+        run: databricks bundle deploy --target ci --auto-approve

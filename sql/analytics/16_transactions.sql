@@ -1,0 +1,4 @@
+SELECT transaction_key,simulation_step,transaction_type,origin_account,destination_account,
+ amount,is_fraud,is_flagged_fraud,origin_balance_before,origin_balance_after,
+ destination_balance_before,destination_balance_after
+FROM filtered ORDER BY is_fraud DESC,amount DESC,transaction_key LIMIT 500

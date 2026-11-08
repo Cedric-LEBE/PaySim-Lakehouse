@@ -1,59 +1,64 @@
 # PaySim-Lakehouse
 
-Pipeline de données financières simulées, de l'ingestion Kafka à l'analyse SQL sur Delta Lake. Le projet met en œuvre une architecture Bronze/Silver/Gold, des contrôles de qualité, une déduplication métier et un schéma en étoile.
+[Français](README.fr.md)
 
-**État : version locale fonctionnelle.** Les indicateurs de fraude utilisent les labels PaySim pour l'analyse descriptive. L'entraînement d'un modèle et le déploiement AWS/Databricks figurent dans la [feuille de route](docs/roadmap.md).
+An incremental lakehouse for simulated banking transactions: Kafka ingestion, Bronze/Silver/Gold Delta tables, data quality controls, business deduplication, a star schema and Databricks analytics dashboards.
+
+**Current status:** the local pipeline has been validated on the first **250,000 PaySim transactions**. The star schema has been imported into Databricks Free Edition, and a four-page dashboard and import job are deployed using Declarative Automation Bundles (DAB). Fraud metrics describe the dataset's labels; predictive modeling, VPS deployment and AWS infrastructure remain planned work.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    CSV[PaySim CSV] --> P[Producer Python]
+    CSV[PaySim CSV] --> P[Python Producer]
     P --> K[Kafka · KRaft]
     K -->|Structured Streaming| B[Bronze Delta]
-    B -->|Batch · qualité et déduplication| S[Silver Delta]
-    S --> G[Gold · indicateurs]
-    S --> E[Gold · schéma en étoile]
+    B -->|CDF · validation and deduplication| S[Silver Delta]
+    S -->|CDF| G[Gold Aggregates]
+    S -->|CDF| E[Delta Star Schema]
     E --> SQL[Spark SQL]
+    E -->|Verified Parquet Snapshot| DB[Databricks Managed Tables]
+    DB --> BI[AI/BI Dashboard · DAB]
 ```
 
-- **Ingestion** : rejeu CSV à débit limité, clé de partition par compte émetteur et livraisons confirmées.
-- **Bronze** : conservation des événements bruts et des métadonnées Kafka, avec checkpoint de progression.
-- **Silver** : montants en Decimal, validation, quarantaine, déduplication et détection des identifiants contradictoires.
-- **Gold** : volumes, montants et fraude par type et heure simulée.
-- **Modèle dimensionnel** : une table de faits transaction, trois dimensions et deux rôles pour la dimension compte.
-- **Validation** : tests unitaires et tests d'intégration de reprise, de qualité, de rapprochement avec le CSV et d'intégrité des jointures.
+- **Ingestion:** bounded-memory CSV replay, configurable rate, origin-account partition keys and delivery confirmation.
+- **Bronze:** raw payloads and Kafka metadata, durable checkpoints and offset recovery.
+- **Silver:** exact decimal amounts, validation, quarantine, deduplication and conflicting-identity detection across commits.
+- **Gold:** signed incremental aggregates that handle additions, corrections and withdrawals without double counting on retry.
+- **Star schema:** transaction-grain facts, three dimensions, two account roles and stable keys. Historical dimension members are retained.
+- **Publication:** version-pinned manifests keep star reads coherent across interrupted writes; Gold has its own pinned reader.
+- **Validation:** unit tests, synthetic CI integration, local recovery tests and reconciliation against the original CSV.
 
-Le broker tourne dans Docker ; Python et Spark tournent sur l'hôte. Bronze traite les événements disponibles puis s'arrête (`availableNow`). Silver, les agrégats Gold et l'étoile sont incrémentaux après leur initialisation complète.
+Kafka runs in Docker; Python and Spark run on the host. Bronze processes available events and stops (`availableNow`). Silver, Gold and the star are incremental after initialization. Full-snapshot quality and integrity checks still run, so execution cost is not constant as data grows.
 
-## Prérequis
+## Requirements
 
-Environnement de référence validé : macOS Apple Silicon, Python 3.13, Java 17 et Docker Desktop avec Docker Compose prenant en charge `up --wait`. Les scripts utilisent Bash. Les dépendances figées sont Kafka 4.1.2, Spark 4.0.1, Delta Lake 4.0.1 et confluent-kafka 2.14.0.
+Validated locally on macOS Apple Silicon with Python 3.13, Java 17 and Docker Compose supporting `up --wait`. Bash launchers support macOS/Linux. Pinned components: Kafka 4.1.2, Spark 4.0.1, Delta Lake 4.0.1 and confluent-kafka 2.14.0.
 
-Le port local 9092 doit être libre. Prévoir de l'espace disque pour Spark, ses connecteurs, le CSV et les tables Delta. Le premier lancement télécharge les dépendances ; les suivants utilisent le cache local. Voir les [réglages de ressources](docs/operations.md#ressources-et-stockage).
+Port 9092 must be available. Keep the repository and data on local storage, with room for the CSV, Delta history, Spark dependencies and caches. The first launch downloads dependencies. See [resource limits](docs/operations.md#ressources-et-stockage) (French).
 
-## Démarrage local
+## Local quick start
 
-Exécuter les commandes depuis la racine du dépôt, dans un dossier conservé sur le disque local.
+Run commands from the repository root. Stop on an error before proceeding.
 
-### 1. Installer les dépendances
+### 1. Install dependencies
 
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements-streaming.txt
 ```
 
-### 2. Préparer PaySim
+### 2. Prepare PaySim
 
-Télécharger et décompresser [PaySim sur Kaggle](https://www.kaggle.com/datasets/ealaxi/paysim1), puis placer le CSV ici :
+Download and extract [PaySim on Kaggle](https://www.kaggle.com/datasets/ealaxi/paysim1), then place the version 2 CSV here:
 
 ```text
 data/raw/PS_20174392719_1491204439457_log.csv
 ```
 
-La démonstration utilise la version 2 du dataset. Vérifier son empreinte avec la procédure de [préparation des données](docs/data.md#vérifier-le-fichier) avant de publier les événements. Le CSV complet et les tables générées sont exclus de Git.
+Verify its fingerprint using the [data preparation guide](docs/data.md#vérifier-le-fichier) before publishing events. The CSV and generated tables are excluded from Git.
 
-### 3. Publier 100 transactions dans Kafka
+### 3. Publish the first 100 transactions
 
 ```bash
 bash scripts/kafka.sh start
@@ -66,7 +71,7 @@ PYTHONPATH=src .venv/bin/python -m banking.producer \
   --rate 10
 ```
 
-### 4. Construire les couches Delta et explorer l'étoile
+### 4. Build the Delta layers and explore the star
 
 ```bash
 bash scripts/bronze.sh
@@ -78,80 +83,118 @@ bash scripts/star.sh
 bash scripts/explore.sh
 ```
 
-Kafka doit fonctionner pendant l'ingestion Bronze. Les étapes suivantes lisent les tables locales et peuvent s'exécuter avec Kafka arrêté. En cas d'échec d'une étape, consulter son erreur avant de poursuivre.
+Kafka is required only through Bronze ingestion. Later stages read local Delta tables. Keep tables, incremental state and checkpoints together. Separate full-batch reference outputs remain available with `--mode batch`.
 
-## Exécution automatisée
+## Automated runs and recovery
 
-Après installation des dépendances et téléchargement du CSV, exécuter le pipeline complet sur les 10 000 premières lignes :
+After preparing the CSV, run the complete pipeline:
 
 ```bash
 bash scripts/pipeline.sh --max-messages 10000
 ```
 
-Le lanceur vérifie l'empreinte du CSV et le préfixe demandé, démarre Kafka, publie les événements, construit Bronze, arrête Kafka, puis construit Silver, Gold et l'étoile et rapproche les résultats du CSV. Chaque étape doit réussir avant la suivante. Le débit par défaut est de 100 événements/s, avec des lots Bronze de 1 000 événements.
+The runner verifies the CSV fingerprint and requested prefix, starts Kafka, publishes events, ingests Bronze, stops Kafka, builds the downstream layers and reconciles the results. Defaults are 100 events/s and 1,000 offsets per Bronze batch.
 
-Les journaux et durées sont conservés dans `data/runs/<exécution>/`, avec un bilan `report.json`. Le lanceur conserve les tables et checkpoints existants ; un rejeu augmente Bronze mais reste dédupliqué dans Silver. Il prend en charge macOS et Linux. Voir [l'exploitation du lanceur](docs/operations.md#pipeline-complet).
+Logs, stage durations and `report.json` are stored under `data/runs/`. A lock prevents concurrent runner instances. Replays remain in Bronze and are deduplicated in Silver. The runner refuses a volume smaller than the existing published fact count; use an equal or larger prefix for an established environment.
 
-Silver utilise désormais un traitement incrémental : première initialisation complète, puis lecture des seuls nouveaux commits Bronze et MERGE Delta. Les tables et l'état de progression doivent être conservés ensemble. Les agrégats Gold et l'étoile sont également mis à jour depuis le CDF Silver. Les dimensions conservent leurs membres historiques et les faits suivent les ajouts, corrections et retraits Silver. Voir [Silver incrémental](docs/operations.md#silver-incrémental).
-
-## Résultats de référence
-
-Sur un environnement neuf, avec les **100 premières transactions** du CSV vérifié :
-
-| Indicateur | Résultat |
-| --- | ---: |
-| Lignes Bronze | 100 |
-| Transactions Silver et faits | 100 |
-| Lignes en quarantaine | 0 |
-| Types de transaction observés | 4 |
-| Comptes distincts, tous rôles confondus | 189 |
-| Heures de simulation observées | 1 |
-| Transactions portant le label fraude | 2 |
-| Taux de fraude par transaction | 2 % |
-| Montant total | 11 644 940,90 |
-| Montant des transactions frauduleuses | 362,00 |
-
-Ces chiffres décrivent ce petit échantillon ; ils ne représentent pas le dataset complet. Aucune devise n'est attribuée aux montants. Publier des fixtures ou rejouer le producer augmente les lignes Bronze ; Silver exclut les datasets non sélectionnés et déduplique les rejeux admissibles.
-
-## Tests
-
-Les tests unitaires ne nécessitent ni Kafka ni Spark :
+The larger validated run used:
 
 ```bash
-PYTHONPATH=src .venv/bin/python -m unittest discover -s tests -v
+bash scripts/pipeline.sh --max-messages 250000 --rate 1000 --max-offsets 5000
 ```
 
-Le workflow [GitHub Actions CI](.github/workflows/ci.yml) exécute les dix tests unitaires, puis un scénario d'intégration synthétique Bronze → Silver → Gold → étoile, sur Ubuntu avec Python 3.13 et Java 17. Il se déclenche sur push, pull request et lancement manuel. Le scénario vérifie les rejeux et le retrait d'une transaction en conflit sans Kafka, Docker, CSV Kaggle ni secrets cloud.
+See [operations](docs/operations.md) and [recovery guarantees](docs/architecture.md). No cloud resources are created by these commands.
 
-La [documentation des tests](docs/testing.md) donne les commandes d'intégration, leurs prérequis et les données utilisées. Certains tests attendent précisément l'échantillon de 100 transactions ci-dessus.
+## Databricks dashboards and DAB
 
-## Organisation du dépôt
+Export the four version-pinned star tables as a verified snapshot:
+
+```bash
+bash scripts/export-star.sh
+```
+
+The [import guide](docs/databricks-dashboard.md) covers the four Parquet files and manifest, a managed Unity Catalog volume, the validated import notebook and managed Delta tables. This initial transfer is a manual snapshot transfer, not a live connection to local Kafka.
+
+The [analytics bundle](docs/databricks-bundle.md) deploys an English-language dashboard with **16 analyses, 30 visualizations and six shared filters**:
+
+| Page | Coverage |
+| --- | --- |
+| Overview | Volumes, amounts, approximate median, fraud totals, amount bands and transaction types |
+| Activity Over Time | Hourly counts and amounts, type breakdowns and observed changes |
+| Fraud Analysis | Relative rates, fraud/non-fraud distributions, approximate percentiles, PaySim flag confusion matrix and balance changes |
+| Accounts and Transactions | Origin/destination rankings, counterparties, concentration, fraud-related account roles and transaction details |
+
+Filters apply before aggregation. Undefined ratios remain null. Labels are descriptive ground truth, not predictions. Amounts have no assigned currency; simulation hours are not calendar dates. The manually created dashboard is preserved separately.
+
+With Databricks CLI 1.24.0+ and an authenticated profile:
+
+```bash
+.venv/bin/python scripts/build_dashboard.py
+databricks bundle validate --profile dev --strict --var warehouse_id=<EXISTING_WAREHOUSE_ID>
+databricks bundle deploy --profile dev --var warehouse_id=<EXISTING_WAREHOUSE_ID>
+```
+
+Replace the placeholder and profile as needed. The bundle reuses existing compute, defines an unscheduled import job and creates a draft dashboard. It does not configure public sharing. A [manual GitHub deployment workflow](docs/deployment.md) is prepared but not activated: the standard OIDC setup requires account-level federation configuration unavailable in Free Edition. Never commit authentication tokens or bundle state.
+
+## Validated results
+
+| Metric | Fresh 100-row reference | 250,000-row reference |
+| --- | ---: | ---: |
+| Unique Silver transactions / facts | 100 | 250,000 |
+| Fraud-labeled transactions | 2 | 163 |
+| Fraud rate | 2% | 0.0652% |
+| Total amount | 11,644,940.90 | 44,796,585,140.23 |
+| Fraud amount | 362.00 | 128,120,119.75 |
+| Observed simulation hours | 1 | 14 |
+| Distinct accounts, both roles | 189 | 365,533 |
+
+A fresh 100-row run produces 100 Bronze events and no quarantine rows. Bronze, duplicate and quarantine counts depend on replay history. Retained historical dimensions can outnumber members referenced by current facts. These samples do not represent the full dataset, which has not yet been processed end to end.
+
+## Tests and CI
+
+Unit tests require neither Kafka nor Spark:
+
+```bash
+PYTHONPATH=src .venv/bin/python -m unittest discover -s tests -p 'test_*.py' -v
+```
+
+[GitHub Actions CI](.github/workflows/ci.yml) runs the unit tests, then a synthetic Bronze → Silver → Gold → star scenario on Ubuntu, Python 3.13 and Java 17. The integration scenario covers replay, deduplication, conflict withdrawal, aggregates and dimension references without Docker, Kafka, Kaggle data or cloud secrets.
+
+The dashboard definition is checked against its generator. Local SQL tests additionally reconcile all 16 analyses on the published 250,000-row star with combined filters and an empty selection. See [test scope and commands](docs/testing.md); some reference tests intentionally require exactly the first 100 rows.
+
+## Repository layout
 
 ```text
-infrastructure/kafka/   Broker local Docker Compose
-src/banking/            Producer, consumer et traitements Delta
-scripts/                Commandes de lancement
-sql/star/               Requêtes d'exploration du modèle dimensionnel
-tests/                  Tests unitaires, intégration et fixture synthétique
-docs/                   Architecture, exploitation, données et modèle
-data/                   Données locales et résultats, exclus de Git
+infrastructure/kafka/   Local Kafka Compose configuration
+src/banking/            Producer, consumer, Delta layers and export
+scripts/                Launchers and dashboard generator
+sql/star/               Star exploration queries
+sql/analytics/          Dashboard SQL and shared filters
+databricks/             Import notebook and generated dashboard JSON
+databricks.yml          DAB resource definitions and variables
+tests/                  Unit tests, integration tests and synthetic fixture
+docs/                   Architecture, operations and design guides
+data/                   Local datasets and outputs, excluded from Git
 ```
 
 ## Documentation
 
-| Document | Contenu |
+Detailed guides currently remain in French:
+
+| Guide | Contents |
 | --- | --- |
-| [Architecture](docs/architecture.md) | Contrat d'événement, couches et garanties de reprise |
-| [Données](docs/data.md) | Source PaySim, empreinte, labels et fixture |
-| [Exploitation locale](docs/operations.md) | Commandes, ressources, consumer et dépannage |
-| [Tests](docs/testing.md) | Prérequis, commandes et périmètre de validation |
-| [Schéma en étoile](docs/star-schema.md) | Diagramme, grain, clés, mesures et SQL |
-| [Feuille de route](docs/roadmap.md) | Fonctionnalités disponibles et évolutions prévues |
+| [Architecture](docs/architecture.md) | Event contract, layers, incremental processing and recovery |
+| [Data](docs/data.md) | PaySim source, fingerprint, labels and fixture |
+| [Operations](docs/operations.md) | Commands, limits and troubleshooting |
+| [Testing](docs/testing.md) | Prerequisites, checks and validation scope |
+| [Star schema](docs/star-schema.md) | Grain, keys, measures and publication |
+| [Dashboard and DAB](docs/databricks-bundle.md) | Analyses, filters, deployment and limitations |
+| [Roadmap](docs/roadmap.md) | Implemented features and planned work |
 
-La configuration Kafka est destinée au développement local : un seul nœud, réplication 1 et connexion PLAINTEXT limitée au loopback de l'hôte. Le déploiement distant nécessite une configuration réseau et une authentification adaptées.
+The local single Kafka broker uses replication factor 1 and loopback-only PLAINTEXT. Remote deployment needs its own network, authentication, persistence and backup configuration.
 
-## Source des données
+## Dataset attribution
 
-Dataset : **[Synthetic Financial Datasets for Fraud Detection — PaySim](https://www.kaggle.com/datasets/ealaxi/paysim1)**, publié par Edgar Alonso Lopez-Rojas.
+**[Synthetic Financial Datasets for Fraud Detection — PaySim](https://www.kaggle.com/datasets/ealaxi/paysim1)**, published by Edgar Alonso Lopez-Rojas.
 
-Référence : E. A. Lopez-Rojas, A. Elmir et S. Axelsson, *PaySim: A financial mobile money simulator for fraud detection*, EMSS, 2016. Les conditions d'utilisation des données sont celles indiquées sur la page du dataset ; le CSV n'est pas redistribué dans ce dépôt.
+Reference: E. A. Lopez-Rojas, A. Elmir and S. Axelsson, *PaySim: A financial mobile money simulator for fraud detection*, EMSS, 2016. Dataset use is subject to the terms on its source page. The CSV is not redistributed in this repository.

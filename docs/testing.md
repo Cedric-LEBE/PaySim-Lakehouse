@@ -10,7 +10,9 @@ Exécuter les commandes depuis la racine du dépôt, après installation des dé
 PYTHONPATH=src .venv/bin/python -m unittest discover -s tests -v
 ```
 
-Les dix tests couvrent également l’ordre des étapes du lanceur, le blocage après échec, le nettoyage Kafka et le refus d’un CSV incorrect avant publication. Ils couvrent la précision et l'identité des événements producer, la validation consumer et l'absence de confirmation d'offset lorsque le message, sa clé ou sa sortie sont en échec. Kafka, Spark et le CSV Kaggle ne sont pas requis.
+Les seize tests couvrent également l’ordre des étapes du lanceur, le blocage après échec, le nettoyage Kafka et le refus d’un CSV incorrect avant publication. Ils couvrent la précision et l'identité des événements producer, la validation consumer et l'absence de confirmation d'offset lorsque le message, sa clé ou sa sortie sont en échec. Kafka, Spark et le CSV Kaggle ne sont pas requis.
+
+Les contrôles de déploiement ajoutent cinq tests : configuration absente, mauvaise branche/événement, commit exact, attente de CI, jobs ignorés et refus de revenir à un ancien succès après un échec plus récent. Ils ne nécessitent aucun accès Databricks.
 
 ## Tests Kafka
 
@@ -42,6 +44,8 @@ Ces tests s'exécutent successivement ; Kafka peut rester arrêté.
 
 | Test | Prérequis | Périmètre |
 | --- | --- | --- |
+| `dashboard_analytics_check.py` | Étoile publiée avec exactement les 250 000 premières lignes | Seize analyses, totaux réconciliés, paramètres combinés, concentration et cas vide ; test local |
+| `export_star_check.py` | Fixture synthétique du dépôt | Export Parquet relu, empreintes, montants décimaux, refus d’écrasement et trois requêtes dashboard ; test local |
 | `pipeline_check.py` | Fixture synthétique du dépôt uniquement | Bronze → Silver → Gold → étoile, 2→3→2 faits, relance sans écriture, rejeu métier, conflit retiré, parité avec le batch et quatre références ; exécuté en CI |
 | `silver_incremental_check.py` | Fixture fournie dans le dépôt | CDF, relance sans écriture, conflits entre commits, parité batch, interruption entre MERGE et avant curseur, arrivées pendant reprise, lecteurs bloqués et rejet des suppressions Bronze |
 | `silver_check.py` | Fixture fournie dans le dépôt | Typage, notation scientifique exacte, rejet des sous-centimes et débordements, précision sans arrondi, quarantaine, conflit d'identité, déduplication et reconstructions 1→1→2 |
@@ -51,6 +55,7 @@ Ces tests s'exécutent successivement ; Kafka peut rester arrêté.
 | `star_check.py` | Silver contenant exactement les 100 premières transactions PaySim | Grain, reconstitution par jointures, totaux SQL, clés stables, deux rôles du compte, références et interruption de publication |
 
 ```bash
+BANKING_SPARK_APP=tests/integration/export_star_check.py bash scripts/bronze.sh
 BANKING_SPARK_APP=tests/integration/pipeline_check.py bash scripts/bronze.sh
 BANKING_SPARK_APP=tests/integration/silver_check.py bash scripts/bronze.sh
 BANKING_SPARK_APP=tests/integration/silver_incremental_check.py bash scripts/bronze.sh
@@ -64,7 +69,7 @@ Les données et tables de test sont isolées sous `data/integration/`. Les évé
 
 ## Reproduire l'échantillon de référence
 
-Suivre le [démarrage du README](../README.md#démarrage-local) sur des destinations neuves, avec le CSV contrôlé et les 100 premières lignes publiées une seule fois. Il produit 100 événements Bronze, 100 transactions Silver et zéro ligne en quarantaine.
+Suivre le [démarrage du README](../README.fr.md#démarrage-local) sur des destinations neuves, avec le CSV contrôlé et les 100 premières lignes publiées une seule fois. Il produit 100 événements Bronze, 100 transactions Silver et zéro ligne en quarantaine.
 
 Le bilan attendu est de 2 transactions étiquetées frauduleuses, 362,00 de montant frauduleux et 11 644 940,90 de montant total. L'étoile contient 100 faits, 4 types observés, 1 heure relative et 189 comptes distincts.
 
@@ -135,7 +140,7 @@ L'interruption pendant une écriture Bronze, la perte de rétention Kafka et un 
 
 Le workflow [CI](../.github/workflows/ci.yml) se déclenche à chaque push, à chaque ouverture ou mise à jour d'une pull request, et manuellement via `workflow_dispatch`. Les deux jobs utilisent Ubuntu 24.04 et Python 3.13, avec lecture seule du dépôt et actions figées par SHA.
 
-1. **Unit tests (Python 3.13)** installe `requirements.txt`, vérifie les dépendances et exécute les dix tests unitaires sans Spark ni Kafka. Ce job est limité à cinq minutes.
+1. **Unit tests (Python 3.13)** installe `requirements.txt`, vérifie les dépendances et exécute les seize tests unitaires sans Spark ni Kafka. Ce job est limité à cinq minutes.
 2. **Incremental pipeline (Spark / Delta)** attend la réussite du premier job, configure Java 17 Temurin, crée `.venv` et installe `requirements-streaming.txt`. Il est limité à quinze minutes et exécute :
 
 ```bash

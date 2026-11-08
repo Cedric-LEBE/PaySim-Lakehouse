@@ -23,7 +23,7 @@ Le périmètre validé de bout en bout comprend les préfixes de 100, 10 000 et 
 - Tester une interruption pendant une écriture Bronze et une perte d'offsets liée à la rétention Kafka.
 - Mesurer et optimiser les scans de validation et les MERGE avant le dataset complet.
 - Étendre la CI aux scénarios d'interruption et à Kafka lorsque le temps et les ressources d'exécution le permettent.
-- Ajouter une restitution BI du modèle dimensionnel.
+- Finaliser la vérification visuelle du dashboard DAB, puis importer les tables de suivi pour une page qualité.
 - Évaluer une approche de détection de fraude avec séparation entraînement/évaluation et prévention des fuites de labels.
 
 ## Déploiement et industrialisation
@@ -33,6 +33,6 @@ Le périmètre validé de bout en bout comprend les préfixes de 100, 10 000 et 
 | VPS | Dimensionnement à partir de mesures, budget, persistance, exploitation et accès Kafka sécurisé |
 | AWS | Stockage S3, rôles IAM à privilèges minimaux, budget et cycle de vie des ressources |
 | Databricks | Vérification des capacités de l'environnement retenu, connectivité Kafka, tables et gouvernance Unity Catalog |
-| Livraison | Databricks Asset Bundles, tests, secrets externes et CI/CD |
+| Livraison | Bundle dashboard/job disponible ; workflow manuel GitHub préparé, activation OIDC bloquée par les limites de compte Free Edition |
 
-Ces intégrations ne sont pas implémentées dans la version actuelle. Aucun provisionnement ni coût cloud n'est nécessaire pour le parcours local. Le choix d'une offre VPS ou Databricks sera vérifié au moment du déploiement.
+Le VPS, le provisionnement AWS et l’activation du déploiement GitHub ne sont pas réalisés dans la version actuelle. Aucun provisionnement ni coût cloud n'est nécessaire pour le parcours local. Le choix d'une offre VPS ou Databricks sera vérifié au moment du déploiement.

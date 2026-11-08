@@ -15,7 +15,7 @@
 | Spark / Scala | 4.0.1 / 2.13 |
 | Delta Lake | 4.0.1 |
 
-Les dépendances Python sont dans `requirements.txt` et `requirements-streaming.txt`. Installer les dépendances complètes avec les commandes du [démarrage local](../README.md#démarrage-local). Les scripts utilisent l'environnement `.venv` situé à la racine ; son activation dans le terminal est facultative.
+Les dépendances Python sont dans `requirements.txt` et `requirements-streaming.txt`. Installer les dépendances complètes avec les commandes du [démarrage local](../README.fr.md#démarrage-local). Les scripts utilisent l'environnement `.venv` situé à la racine ; son activation dans le terminal est facultative.
 
 ## Ressources et stockage
 

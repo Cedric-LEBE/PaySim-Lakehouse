@@ -1,0 +1,55 @@
+bundle:
+  name: paysim-lakehouse
+  databricks_cli_version: '>= 1.24.0'
+variables:
+  catalog:
+    default: workspace
+  schema:
+    description: Schema containing the imported and validated snapshot
+    default: paysim_20261106t220939z_9c554717
+  warehouse_id:
+    description: Existing SQL warehouse ID; no compute resource is created
+  export_path:
+    description: Verified export directory already uploaded to the volume
+    default: /Volumes/workspace/paysim_uploads/exports/20261106T220939Z-9c554717/
+resources:
+  jobs:
+    import_star:
+      name: PaySim — Import Validated Star Schema
+      max_concurrent_runs: 1
+      timeout_seconds: 900
+      tasks:
+        - task_key: import_star
+          notebook_task:
+            notebook_path: ${workspace.file_path}/databricks/notebooks/01_import_star.py
+            base_parameters:
+              export_path: ${var.export_path}
+              catalog: ${var.catalog}
+              target_schema: ${var.schema}
+  dashboards:
+    paysim_analytics:
+      display_name: PaySim — Banking and Fraud Analytics
+      file_path: databricks/dashboards/paysim.lvdash.json
+      warehouse_id: ${var.warehouse_id}
+      dataset_catalog: ${var.catalog}
+      dataset_schema: ${var.schema}
+targets:
+  dev:
+    default: true
+    mode: development
+    workspace:
+      host: https://dbc-22e54698-1ac1.cloud.databricks.com
+  ci:
+    mode: production
+    workspace:
+      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}
+    presets:
+      name_prefix: '[ci] '
+sync:
+  include:
+    - databricks/**
+    - sql/analytics/**
+  exclude:
+    - data/**
+    - .venv/**
+    - .git/**

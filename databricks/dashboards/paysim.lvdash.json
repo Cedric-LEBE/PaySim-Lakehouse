@@ -1,0 +1,5621 @@
+{
+  "datasets": [
+    {
+      "name": "01_summary",
+      "displayName": "Summary",
+      "queryLines": [
+        "WITH filtered AS (\n",
+        "  SELECT * FROM transactions_dashboard\n",
+        "  WHERE (size(:types) = 0 OR array_contains(:types, transaction_type))\n",
+        "    AND (size(:fraud_labels) = 0 OR array_contains(:fraud_labels,\n",
+        "         CASE WHEN is_fraud = 1 THEN 'Fraudulent' ELSE 'Non-fraudulent' END))\n",
+        "    AND simulation_step BETWEEN try_cast(:hour_min AS BIGINT) AND try_cast(:hour_max AS BIGINT)\n",
+        "    AND amount BETWEEN try_cast(:amount_min AS DECIMAL(20,2)) AND try_cast(:amount_max AS DECIMAL(20,2))\n",
+        ")\n",
+        "SELECT COUNT(*) AS transactions, COALESCE(SUM(amount),0) AS total_amount,\n",
+        " AVG(amount) AS average_amount, percentile_approx(amount,0.5,10000) AS median_amount,\n",
+        " MIN(amount) AS minimum_amount, MAX(amount) AS maximum_amount,\n",
+        " COALESCE(SUM(is_fraud),0) AS fraud_transactions,\n",
+        " AVG(is_fraud) AS fraud_rate,\n",
+        " COALESCE(SUM(CASE WHEN is_fraud=1 THEN amount ELSE 0 END),0) AS fraud_amount,\n",
+        " SUM(CASE WHEN is_fraud=1 THEN amount ELSE 0 END)/NULLIF(SUM(amount),0) AS fraud_amount_share,\n",
+        " COUNT(DISTINCT origin_account) AS origin_accounts,\n",
+        " COUNT(DISTINCT destination_account) AS destination_accounts,\n",
+        " MIN(simulation_step) AS first_hour, MAX(simulation_step) AS last_hour\n",
+        "FROM filtered\n"
+      ],
+      "parameters": [
+        {
+          "keyword": "types",
+          "displayName": "Transaction Types",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "fraud_labels",
+          "displayName": "Fraud Labels",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "hour_min",
+          "displayName": "First Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "hour_max",
+          "displayName": "Last Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "744"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_min",
+          "displayName": "Minimum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_max",
+          "displayName": "Maximum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "999999999999999999.99"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02_by_type",
+      "displayName": "By Type",
+      "queryLines": [
+        "WITH filtered AS (\n",
+        "  SELECT * FROM transactions_dashboard\n",
+        "  WHERE (size(:types) = 0 OR array_contains(:types, transaction_type))\n",
+        "    AND (size(:fraud_labels) = 0 OR array_contains(:fraud_labels,\n",
+        "         CASE WHEN is_fraud = 1 THEN 'Fraudulent' ELSE 'Non-fraudulent' END))\n",
+        "    AND simulation_step BETWEEN try_cast(:hour_min AS BIGINT) AND try_cast(:hour_max AS BIGINT)\n",
+        "    AND amount BETWEEN try_cast(:amount_min AS DECIMAL(20,2)) AND try_cast(:amount_max AS DECIMAL(20,2))\n",
+        ")\n",
+        "SELECT transaction_type, COUNT(*) AS transactions, SUM(amount) AS total_amount,\n",
+        " AVG(amount) AS average_amount, percentile_approx(amount,0.5,10000) AS median_amount,\n",
+        " SUM(is_fraud) AS fraud_transactions, AVG(is_fraud) AS fraud_rate,\n",
+        " SUM(CASE WHEN is_fraud=1 THEN amount ELSE 0 END) AS fraud_amount\n",
+        "FROM filtered GROUP BY transaction_type ORDER BY transactions DESC\n"
+      ],
+      "parameters": [
+        {
+          "keyword": "types",
+          "displayName": "Transaction Types",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "fraud_labels",
+          "displayName": "Fraud Labels",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "hour_min",
+          "displayName": "First Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "hour_max",
+          "displayName": "Last Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "744"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_min",
+          "displayName": "Minimum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_max",
+          "displayName": "Maximum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "999999999999999999.99"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03_hourly",
+      "displayName": "Hourly",
+      "queryLines": [
+        "WITH filtered AS (\n",
+        "  SELECT * FROM transactions_dashboard\n",
+        "  WHERE (size(:types) = 0 OR array_contains(:types, transaction_type))\n",
+        "    AND (size(:fraud_labels) = 0 OR array_contains(:fraud_labels,\n",
+        "         CASE WHEN is_fraud = 1 THEN 'Fraudulent' ELSE 'Non-fraudulent' END))\n",
+        "    AND simulation_step BETWEEN try_cast(:hour_min AS BIGINT) AND try_cast(:hour_max AS BIGINT)\n",
+        "    AND amount BETWEEN try_cast(:amount_min AS DECIMAL(20,2)) AND try_cast(:amount_max AS DECIMAL(20,2))\n",
+        ")\n",
+        "SELECT simulation_step, COUNT(*) AS transactions, SUM(amount) AS total_amount,\n",
+        " AVG(amount) AS average_amount, SUM(is_fraud) AS fraud_transactions, AVG(is_fraud) AS fraud_rate,\n",
+        " SUM(CASE WHEN is_fraud=1 THEN amount ELSE 0 END) AS fraud_amount\n",
+        "FROM filtered GROUP BY simulation_step ORDER BY simulation_step\n"
+      ],
+      "parameters": [
+        {
+          "keyword": "types",
+          "displayName": "Transaction Types",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "fraud_labels",
+          "displayName": "Fraud Labels",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "hour_min",
+          "displayName": "First Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "hour_max",
+          "displayName": "Last Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "744"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_min",
+          "displayName": "Minimum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_max",
+          "displayName": "Maximum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "999999999999999999.99"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04_hour_type",
+      "displayName": "Hour Type",
+      "queryLines": [
+        "WITH filtered AS (\n",
+        "  SELECT * FROM transactions_dashboard\n",
+        "  WHERE (size(:types) = 0 OR array_contains(:types, transaction_type))\n",
+        "    AND (size(:fraud_labels) = 0 OR array_contains(:fraud_labels,\n",
+        "         CASE WHEN is_fraud = 1 THEN 'Fraudulent' ELSE 'Non-fraudulent' END))\n",
+        "    AND simulation_step BETWEEN try_cast(:hour_min AS BIGINT) AND try_cast(:hour_max AS BIGINT)\n",
+        "    AND amount BETWEEN try_cast(:amount_min AS DECIMAL(20,2)) AND try_cast(:amount_max AS DECIMAL(20,2))\n",
+        ")\n",
+        "SELECT simulation_step, transaction_type, COUNT(*) AS transactions,\n",
+        " SUM(amount) AS total_amount, SUM(is_fraud) AS fraud_transactions\n",
+        "FROM filtered GROUP BY simulation_step,transaction_type ORDER BY simulation_step,transaction_type\n"
+      ],
+      "parameters": [
+        {
+          "keyword": "types",
+          "displayName": "Transaction Types",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "fraud_labels",
+          "displayName": "Fraud Labels",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "hour_min",
+          "displayName": "First Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "hour_max",
+          "displayName": "Last Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "744"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_min",
+          "displayName": "Minimum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_max",
+          "displayName": "Maximum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "999999999999999999.99"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05_hour_change",
+      "displayName": "Hour Change",
+      "queryLines": [
+        "WITH filtered AS (\n",
+        "  SELECT * FROM transactions_dashboard\n",
+        "  WHERE (size(:types) = 0 OR array_contains(:types, transaction_type))\n",
+        "    AND (size(:fraud_labels) = 0 OR array_contains(:fraud_labels,\n",
+        "         CASE WHEN is_fraud = 1 THEN 'Fraudulent' ELSE 'Non-fraudulent' END))\n",
+        "    AND simulation_step BETWEEN try_cast(:hour_min AS BIGINT) AND try_cast(:hour_max AS BIGINT)\n",
+        "    AND amount BETWEEN try_cast(:amount_min AS DECIMAL(20,2)) AND try_cast(:amount_max AS DECIMAL(20,2))\n",
+        ")\n",
+        "SELECT simulation_step, transactions, total_amount,\n",
+        " transactions-LAG(transactions) OVER(ORDER BY simulation_step) AS transaction_change,\n",
+        " (transactions-LAG(transactions) OVER(ORDER BY simulation_step))*1.0/\n",
+        " NULLIF(LAG(transactions) OVER(ORDER BY simulation_step),0) AS transaction_growth\n",
+        "FROM (SELECT simulation_step,COUNT(*) AS transactions,SUM(amount) AS total_amount\n",
+        "FROM filtered GROUP BY simulation_step) ORDER BY simulation_step\n"
+      ],
+      "parameters": [
+        {
+          "keyword": "types",
+          "displayName": "Transaction Types",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "fraud_labels",
+          "displayName": "Fraud Labels",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "hour_min",
+          "displayName": "First Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "hour_max",
+          "displayName": "Last Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "744"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_min",
+          "displayName": "Minimum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_max",
+          "displayName": "Maximum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "999999999999999999.99"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "06_amount_distribution",
+      "displayName": "Amount Distribution",
+      "queryLines": [
+        "WITH filtered AS (\n",
+        "  SELECT * FROM transactions_dashboard\n",
+        "  WHERE (size(:types) = 0 OR array_contains(:types, transaction_type))\n",
+        "    AND (size(:fraud_labels) = 0 OR array_contains(:fraud_labels,\n",
+        "         CASE WHEN is_fraud = 1 THEN 'Fraudulent' ELSE 'Non-fraudulent' END))\n",
+        "    AND simulation_step BETWEEN try_cast(:hour_min AS BIGINT) AND try_cast(:hour_max AS BIGINT)\n",
+        "    AND amount BETWEEN try_cast(:amount_min AS DECIMAL(20,2)) AND try_cast(:amount_max AS DECIMAL(20,2))\n",
+        ")\n",
+        "SELECT amount_band, MIN(band_order) AS band_order, COUNT(*) AS transactions,\n",
+        " SUM(amount) AS total_amount, SUM(is_fraud) AS fraud_transactions, AVG(is_fraud) AS fraud_rate\n",
+        "FROM (SELECT *, CASE WHEN amount=0 THEN '0' WHEN amount<1000 THEN 'Over 0 to <1,000'\n",
+        " WHEN amount<10000 THEN '1,000 to <10,000' WHEN amount<100000 THEN '10,000 to <100,000'\n",
+        " WHEN amount<1000000 THEN '100,000 to <1,000,000' ELSE '1,000,000+' END AS amount_band,\n",
+        " CASE WHEN amount=0 THEN 0 WHEN amount<1000 THEN 1 WHEN amount<10000 THEN 2\n",
+        " WHEN amount<100000 THEN 3 WHEN amount<1000000 THEN 4 ELSE 5 END AS band_order FROM filtered)\n",
+        "GROUP BY amount_band ORDER BY band_order\n"
+      ],
+      "parameters": [
+        {
+          "keyword": "types",
+          "displayName": "Transaction Types",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "fraud_labels",
+          "displayName": "Fraud Labels",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "hour_min",
+          "displayName": "First Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "hour_max",
+          "displayName": "Last Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "744"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_min",
+          "displayName": "Minimum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_max",
+          "displayName": "Maximum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "999999999999999999.99"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "07_fraud_comparison",
+      "displayName": "Fraud Comparison",
+      "queryLines": [
+        "WITH filtered AS (\n",
+        "  SELECT * FROM transactions_dashboard\n",
+        "  WHERE (size(:types) = 0 OR array_contains(:types, transaction_type))\n",
+        "    AND (size(:fraud_labels) = 0 OR array_contains(:fraud_labels,\n",
+        "         CASE WHEN is_fraud = 1 THEN 'Fraudulent' ELSE 'Non-fraudulent' END))\n",
+        "    AND simulation_step BETWEEN try_cast(:hour_min AS BIGINT) AND try_cast(:hour_max AS BIGINT)\n",
+        "    AND amount BETWEEN try_cast(:amount_min AS DECIMAL(20,2)) AND try_cast(:amount_max AS DECIMAL(20,2))\n",
+        ")\n",
+        "SELECT CASE WHEN is_fraud=1 THEN 'Fraudulent' ELSE 'Non-fraudulent' END AS fraud_label,\n",
+        " COUNT(*) AS transactions,SUM(amount) AS total_amount,AVG(amount) AS average_amount,\n",
+        " percentile_approx(amount,0.5,10000) AS median_amount,\n",
+        " percentile_approx(amount,0.9,10000) AS p90_amount,\n",
+        " percentile_approx(amount,0.99,10000) AS p99_amount,MAX(amount) AS maximum_amount\n",
+        "FROM filtered GROUP BY is_fraud ORDER BY is_fraud\n"
+      ],
+      "parameters": [
+        {
+          "keyword": "types",
+          "displayName": "Transaction Types",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "fraud_labels",
+          "displayName": "Fraud Labels",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "hour_min",
+          "displayName": "First Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "hour_max",
+          "displayName": "Last Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "744"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_min",
+          "displayName": "Minimum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_max",
+          "displayName": "Maximum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "999999999999999999.99"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "08_type_risk",
+      "displayName": "Type Risk",
+      "queryLines": [
+        "WITH filtered AS (\n",
+        "  SELECT * FROM transactions_dashboard\n",
+        "  WHERE (size(:types) = 0 OR array_contains(:types, transaction_type))\n",
+        "    AND (size(:fraud_labels) = 0 OR array_contains(:fraud_labels,\n",
+        "         CASE WHEN is_fraud = 1 THEN 'Fraudulent' ELSE 'Non-fraudulent' END))\n",
+        "    AND simulation_step BETWEEN try_cast(:hour_min AS BIGINT) AND try_cast(:hour_max AS BIGINT)\n",
+        "    AND amount BETWEEN try_cast(:amount_min AS DECIMAL(20,2)) AND try_cast(:amount_max AS DECIMAL(20,2))\n",
+        ")\n",
+        "SELECT transaction_type,COUNT(*) AS transactions,SUM(is_fraud) AS fraud_transactions,\n",
+        " AVG(is_fraud) AS fraud_rate,AVG(is_fraud)/(SELECT NULLIF(AVG(is_fraud),0) FROM filtered) AS relative_rate,\n",
+        " SUM(CASE WHEN is_fraud=1 THEN amount ELSE 0 END) AS fraud_amount\n",
+        "FROM filtered GROUP BY transaction_type ORDER BY fraud_transactions DESC\n"
+      ],
+      "parameters": [
+        {
+          "keyword": "types",
+          "displayName": "Transaction Types",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "fraud_labels",
+          "displayName": "Fraud Labels",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "hour_min",
+          "displayName": "First Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "hour_max",
+          "displayName": "Last Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "744"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_min",
+          "displayName": "Minimum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_max",
+          "displayName": "Maximum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "999999999999999999.99"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "09_flag_matrix",
+      "displayName": "Flag Matrix",
+      "queryLines": [
+        "WITH filtered AS (\n",
+        "  SELECT * FROM transactions_dashboard\n",
+        "  WHERE (size(:types) = 0 OR array_contains(:types, transaction_type))\n",
+        "    AND (size(:fraud_labels) = 0 OR array_contains(:fraud_labels,\n",
+        "         CASE WHEN is_fraud = 1 THEN 'Fraudulent' ELSE 'Non-fraudulent' END))\n",
+        "    AND simulation_step BETWEEN try_cast(:hour_min AS BIGINT) AND try_cast(:hour_max AS BIGINT)\n",
+        "    AND amount BETWEEN try_cast(:amount_min AS DECIMAL(20,2)) AND try_cast(:amount_max AS DECIMAL(20,2))\n",
+        ")\n",
+        "SELECT is_fraud,is_flagged_fraud,COUNT(*) AS transactions,\n",
+        " CASE WHEN is_fraud=1 AND is_flagged_fraud=1 THEN 'True Positive'\n",
+        " WHEN is_fraud=0 AND is_flagged_fraud=1 THEN 'False Positive'\n",
+        " WHEN is_fraud=1 AND is_flagged_fraud=0 THEN 'False Negative' ELSE 'True Negative' END AS outcome\n",
+        "FROM filtered GROUP BY is_fraud,is_flagged_fraud ORDER BY is_fraud,is_flagged_fraud\n"
+      ],
+      "parameters": [
+        {
+          "keyword": "types",
+          "displayName": "Transaction Types",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "fraud_labels",
+          "displayName": "Fraud Labels",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "hour_min",
+          "displayName": "First Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "hour_max",
+          "displayName": "Last Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "744"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_min",
+          "displayName": "Minimum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_max",
+          "displayName": "Maximum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "999999999999999999.99"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10_flag_metrics",
+      "displayName": "Flag Metrics",
+      "queryLines": [
+        "WITH filtered AS (\n",
+        "  SELECT * FROM transactions_dashboard\n",
+        "  WHERE (size(:types) = 0 OR array_contains(:types, transaction_type))\n",
+        "    AND (size(:fraud_labels) = 0 OR array_contains(:fraud_labels,\n",
+        "         CASE WHEN is_fraud = 1 THEN 'Fraudulent' ELSE 'Non-fraudulent' END))\n",
+        "    AND simulation_step BETWEEN try_cast(:hour_min AS BIGINT) AND try_cast(:hour_max AS BIGINT)\n",
+        "    AND amount BETWEEN try_cast(:amount_min AS DECIMAL(20,2)) AND try_cast(:amount_max AS DECIMAL(20,2))\n",
+        ")\n",
+        "SELECT tp,fp,fn,tn,\n",
+        " tp*1.0/NULLIF(tp+fp,0) AS precision_flag,\n",
+        " tp*1.0/NULLIF(tp+fn,0) AS recall_flag,\n",
+        " 2.0*tp/NULLIF(2*tp+fp+fn,0) AS f1_flag,\n",
+        " (tp+tn)*1.0/NULLIF(tp+fp+fn+tn,0) AS accuracy_flag\n",
+        "FROM (SELECT COALESCE(SUM(CASE WHEN is_fraud=1 AND is_flagged_fraud=1 THEN 1 ELSE 0 END),0) AS tp,\n",
+        " COALESCE(SUM(CASE WHEN is_fraud=0 AND is_flagged_fraud=1 THEN 1 ELSE 0 END),0) AS fp,\n",
+        " COALESCE(SUM(CASE WHEN is_fraud=1 AND is_flagged_fraud=0 THEN 1 ELSE 0 END),0) AS fn,\n",
+        " COALESCE(SUM(CASE WHEN is_fraud=0 AND is_flagged_fraud=0 THEN 1 ELSE 0 END),0) AS tn FROM filtered)\n"
+      ],
+      "parameters": [
+        {
+          "keyword": "types",
+          "displayName": "Transaction Types",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "fraud_labels",
+          "displayName": "Fraud Labels",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "hour_min",
+          "displayName": "First Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "hour_max",
+          "displayName": "Last Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "744"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_min",
+          "displayName": "Minimum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_max",
+          "displayName": "Maximum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "999999999999999999.99"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "11_origin_accounts",
+      "displayName": "Origin Accounts",
+      "queryLines": [
+        "WITH filtered AS (\n",
+        "  SELECT * FROM transactions_dashboard\n",
+        "  WHERE (size(:types) = 0 OR array_contains(:types, transaction_type))\n",
+        "    AND (size(:fraud_labels) = 0 OR array_contains(:fraud_labels,\n",
+        "         CASE WHEN is_fraud = 1 THEN 'Fraudulent' ELSE 'Non-fraudulent' END))\n",
+        "    AND simulation_step BETWEEN try_cast(:hour_min AS BIGINT) AND try_cast(:hour_max AS BIGINT)\n",
+        "    AND amount BETWEEN try_cast(:amount_min AS DECIMAL(20,2)) AND try_cast(:amount_max AS DECIMAL(20,2))\n",
+        ")\n",
+        "SELECT origin_account,COUNT(*) AS transactions,SUM(amount) AS total_amount,\n",
+        " COUNT(DISTINCT destination_account) AS distinct_counterparties,SUM(is_fraud) AS fraud_transactions,\n",
+        " SUM(CASE WHEN is_fraud=1 THEN amount ELSE 0 END) AS fraud_amount\n",
+        "FROM filtered GROUP BY origin_account ORDER BY total_amount DESC,origin_account LIMIT 20\n"
+      ],
+      "parameters": [
+        {
+          "keyword": "types",
+          "displayName": "Transaction Types",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "fraud_labels",
+          "displayName": "Fraud Labels",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "hour_min",
+          "displayName": "First Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "hour_max",
+          "displayName": "Last Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "744"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_min",
+          "displayName": "Minimum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_max",
+          "displayName": "Maximum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "999999999999999999.99"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "12_destination_accounts",
+      "displayName": "Destination Accounts",
+      "queryLines": [
+        "WITH filtered AS (\n",
+        "  SELECT * FROM transactions_dashboard\n",
+        "  WHERE (size(:types) = 0 OR array_contains(:types, transaction_type))\n",
+        "    AND (size(:fraud_labels) = 0 OR array_contains(:fraud_labels,\n",
+        "         CASE WHEN is_fraud = 1 THEN 'Fraudulent' ELSE 'Non-fraudulent' END))\n",
+        "    AND simulation_step BETWEEN try_cast(:hour_min AS BIGINT) AND try_cast(:hour_max AS BIGINT)\n",
+        "    AND amount BETWEEN try_cast(:amount_min AS DECIMAL(20,2)) AND try_cast(:amount_max AS DECIMAL(20,2))\n",
+        ")\n",
+        "SELECT destination_account,COUNT(*) AS transactions,SUM(amount) AS total_amount,\n",
+        " COUNT(DISTINCT origin_account) AS distinct_counterparties,SUM(is_fraud) AS fraud_transactions,\n",
+        " SUM(CASE WHEN is_fraud=1 THEN amount ELSE 0 END) AS fraud_amount\n",
+        "FROM filtered GROUP BY destination_account ORDER BY total_amount DESC,destination_account LIMIT 20\n"
+      ],
+      "parameters": [
+        {
+          "keyword": "types",
+          "displayName": "Transaction Types",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "fraud_labels",
+          "displayName": "Fraud Labels",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "hour_min",
+          "displayName": "First Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "hour_max",
+          "displayName": "Last Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "744"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_min",
+          "displayName": "Minimum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_max",
+          "displayName": "Maximum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "999999999999999999.99"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "13_concentration",
+      "displayName": "Concentration",
+      "queryLines": [
+        "WITH filtered AS (\n",
+        "  SELECT * FROM transactions_dashboard\n",
+        "  WHERE (size(:types) = 0 OR array_contains(:types, transaction_type))\n",
+        "    AND (size(:fraud_labels) = 0 OR array_contains(:fraud_labels,\n",
+        "         CASE WHEN is_fraud = 1 THEN 'Fraudulent' ELSE 'Non-fraudulent' END))\n",
+        "    AND simulation_step BETWEEN try_cast(:hour_min AS BIGINT) AND try_cast(:hour_max AS BIGINT)\n",
+        "    AND amount BETWEEN try_cast(:amount_min AS DECIMAL(20,2)) AND try_cast(:amount_max AS DECIMAL(20,2))\n",
+        ")\n",
+        "SELECT * FROM (SELECT account_rank,origin_account,total_amount,\n",
+        " total_amount/NULLIF(SUM(total_amount) OVER(),0) AS amount_share,\n",
+        " SUM(total_amount) OVER(ORDER BY total_amount DESC,origin_account ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)\n",
+        " /NULLIF(SUM(total_amount) OVER(),0) AS cumulative_share\n",
+        "FROM (SELECT origin_account,SUM(amount) AS total_amount,\n",
+        " ROW_NUMBER() OVER(ORDER BY SUM(amount) DESC,origin_account) AS account_rank\n",
+        " FROM filtered GROUP BY origin_account)) WHERE account_rank<=20 ORDER BY account_rank\n"
+      ],
+      "parameters": [
+        {
+          "keyword": "types",
+          "displayName": "Transaction Types",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "fraud_labels",
+          "displayName": "Fraud Labels",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "hour_min",
+          "displayName": "First Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "hour_max",
+          "displayName": "Last Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "744"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_min",
+          "displayName": "Minimum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_max",
+          "displayName": "Maximum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "999999999999999999.99"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "14_fraud_accounts",
+      "displayName": "Fraud Accounts",
+      "queryLines": [
+        "WITH filtered AS (\n",
+        "  SELECT * FROM transactions_dashboard\n",
+        "  WHERE (size(:types) = 0 OR array_contains(:types, transaction_type))\n",
+        "    AND (size(:fraud_labels) = 0 OR array_contains(:fraud_labels,\n",
+        "         CASE WHEN is_fraud = 1 THEN 'Fraudulent' ELSE 'Non-fraudulent' END))\n",
+        "    AND simulation_step BETWEEN try_cast(:hour_min AS BIGINT) AND try_cast(:hour_max AS BIGINT)\n",
+        "    AND amount BETWEEN try_cast(:amount_min AS DECIMAL(20,2)) AND try_cast(:amount_max AS DECIMAL(20,2))\n",
+        ")\n",
+        "SELECT account_role,account,COUNT(*) AS fraud_participations,SUM(amount) AS fraud_amount\n",
+        "FROM (SELECT 'Origin Account' AS account_role,origin_account AS account,amount FROM filtered WHERE is_fraud=1\n",
+        " UNION ALL SELECT 'Destination Account',destination_account,amount FROM filtered WHERE is_fraud=1)\n",
+        "GROUP BY account_role,account ORDER BY fraud_amount DESC,account_role,account LIMIT 30\n"
+      ],
+      "parameters": [
+        {
+          "keyword": "types",
+          "displayName": "Transaction Types",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "fraud_labels",
+          "displayName": "Fraud Labels",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "hour_min",
+          "displayName": "First Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "hour_max",
+          "displayName": "Last Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "744"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_min",
+          "displayName": "Minimum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_max",
+          "displayName": "Maximum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "999999999999999999.99"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "15_balance_changes",
+      "displayName": "Balance Changes",
+      "queryLines": [
+        "WITH filtered AS (\n",
+        "  SELECT * FROM transactions_dashboard\n",
+        "  WHERE (size(:types) = 0 OR array_contains(:types, transaction_type))\n",
+        "    AND (size(:fraud_labels) = 0 OR array_contains(:fraud_labels,\n",
+        "         CASE WHEN is_fraud = 1 THEN 'Fraudulent' ELSE 'Non-fraudulent' END))\n",
+        "    AND simulation_step BETWEEN try_cast(:hour_min AS BIGINT) AND try_cast(:hour_max AS BIGINT)\n",
+        "    AND amount BETWEEN try_cast(:amount_min AS DECIMAL(20,2)) AND try_cast(:amount_max AS DECIMAL(20,2))\n",
+        ")\n",
+        "SELECT transaction_type,CASE WHEN is_fraud=1 THEN 'Fraudulent' ELSE 'Non-fraudulent' END AS fraud_label,\n",
+        " COUNT(*) AS transactions,AVG(amount) AS average_amount,\n",
+        " AVG(origin_balance_after-origin_balance_before) AS average_origin_change,\n",
+        " AVG(destination_balance_after-destination_balance_before) AS average_destination_change,\n",
+        " SUM(CASE WHEN origin_balance_after=0 THEN 1 ELSE 0 END) AS origin_zero_after\n",
+        "FROM filtered GROUP BY transaction_type,is_fraud ORDER BY transaction_type,is_fraud\n"
+      ],
+      "parameters": [
+        {
+          "keyword": "types",
+          "displayName": "Transaction Types",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "fraud_labels",
+          "displayName": "Fraud Labels",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "hour_min",
+          "displayName": "First Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "hour_max",
+          "displayName": "Last Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "744"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_min",
+          "displayName": "Minimum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_max",
+          "displayName": "Maximum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "999999999999999999.99"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "16_transactions",
+      "displayName": "Transactions",
+      "queryLines": [
+        "WITH filtered AS (\n",
+        "  SELECT * FROM transactions_dashboard\n",
+        "  WHERE (size(:types) = 0 OR array_contains(:types, transaction_type))\n",
+        "    AND (size(:fraud_labels) = 0 OR array_contains(:fraud_labels,\n",
+        "         CASE WHEN is_fraud = 1 THEN 'Fraudulent' ELSE 'Non-fraudulent' END))\n",
+        "    AND simulation_step BETWEEN try_cast(:hour_min AS BIGINT) AND try_cast(:hour_max AS BIGINT)\n",
+        "    AND amount BETWEEN try_cast(:amount_min AS DECIMAL(20,2)) AND try_cast(:amount_max AS DECIMAL(20,2))\n",
+        ")\n",
+        "SELECT transaction_key,simulation_step,transaction_type,origin_account,destination_account,\n",
+        " amount,is_fraud,is_flagged_fraud,origin_balance_before,origin_balance_after,\n",
+        " destination_balance_before,destination_balance_after\n",
+        "FROM filtered ORDER BY is_fraud DESC,amount DESC,transaction_key LIMIT 500\n"
+      ],
+      "parameters": [
+        {
+          "keyword": "types",
+          "displayName": "Transaction Types",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "fraud_labels",
+          "displayName": "Fraud Labels",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": []
+            }
+          },
+          "complexType": "MULTI"
+        },
+        {
+          "keyword": "hour_min",
+          "displayName": "First Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "hour_max",
+          "displayName": "Last Simulation Hour",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "744"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_min",
+          "displayName": "Minimum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "keyword": "amount_max",
+          "displayName": "Maximum Amount",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "999999999999999999.99"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "filter_choices",
+      "displayName": "Filter Options",
+      "queryLines": [
+        "SELECT transaction_type, CASE WHEN is_fraud=1 THEN 'Fraudulent' ELSE 'Non-fraudulent' END AS fraud_label FROM transactions_dashboard"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "filters",
+      "displayName": "Global Filters",
+      "pageType": "PAGE_TYPE_GLOBAL_FILTERS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "filter_types",
+            "queries": [
+              {
+                "name": "choices",
+                "query": {
+                  "datasetName": "filter_choices",
+                  "fields": [
+                    {
+                      "name": "transaction_type",
+                      "expression": "`transaction_type`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_01_summary",
+                "query": {
+                  "datasetName": "01_summary",
+                  "parameters": [
+                    {
+                      "name": "types",
+                      "keyword": "types"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_02_by_type",
+                "query": {
+                  "datasetName": "02_by_type",
+                  "parameters": [
+                    {
+                      "name": "types",
+                      "keyword": "types"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_03_hourly",
+                "query": {
+                  "datasetName": "03_hourly",
+                  "parameters": [
+                    {
+                      "name": "types",
+                      "keyword": "types"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_04_hour_type",
+                "query": {
+                  "datasetName": "04_hour_type",
+                  "parameters": [
+                    {
+                      "name": "types",
+                      "keyword": "types"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_05_hour_change",
+                "query": {
+                  "datasetName": "05_hour_change",
+                  "parameters": [
+                    {
+                      "name": "types",
+                      "keyword": "types"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_06_amount_distribution",
+                "query": {
+                  "datasetName": "06_amount_distribution",
+                  "parameters": [
+                    {
+                      "name": "types",
+                      "keyword": "types"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_07_fraud_comparison",
+                "query": {
+                  "datasetName": "07_fraud_comparison",
+                  "parameters": [
+                    {
+                      "name": "types",
+                      "keyword": "types"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_08_type_risk",
+                "query": {
+                  "datasetName": "08_type_risk",
+                  "parameters": [
+                    {
+                      "name": "types",
+                      "keyword": "types"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_09_flag_matrix",
+                "query": {
+                  "datasetName": "09_flag_matrix",
+                  "parameters": [
+                    {
+                      "name": "types",
+                      "keyword": "types"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_10_flag_metrics",
+                "query": {
+                  "datasetName": "10_flag_metrics",
+                  "parameters": [
+                    {
+                      "name": "types",
+                      "keyword": "types"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_11_origin_accounts",
+                "query": {
+                  "datasetName": "11_origin_accounts",
+                  "parameters": [
+                    {
+                      "name": "types",
+                      "keyword": "types"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_12_destination_accounts",
+                "query": {
+                  "datasetName": "12_destination_accounts",
+                  "parameters": [
+                    {
+                      "name": "types",
+                      "keyword": "types"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_13_concentration",
+                "query": {
+                  "datasetName": "13_concentration",
+                  "parameters": [
+                    {
+                      "name": "types",
+                      "keyword": "types"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_14_fraud_accounts",
+                "query": {
+                  "datasetName": "14_fraud_accounts",
+                  "parameters": [
+                    {
+                      "name": "types",
+                      "keyword": "types"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_15_balance_changes",
+                "query": {
+                  "datasetName": "15_balance_changes",
+                  "parameters": [
+                    {
+                      "name": "types",
+                      "keyword": "types"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_16_transactions",
+                "query": {
+                  "datasetName": "16_transactions",
+                  "parameters": [
+                    {
+                      "name": "types",
+                      "keyword": "types"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "transaction_type",
+                    "queryName": "choices"
+                  },
+                  {
+                    "parameterName": "types",
+                    "queryName": "q_01_summary"
+                  },
+                  {
+                    "parameterName": "types",
+                    "queryName": "q_02_by_type"
+                  },
+                  {
+                    "parameterName": "types",
+                    "queryName": "q_03_hourly"
+                  },
+                  {
+                    "parameterName": "types",
+                    "queryName": "q_04_hour_type"
+                  },
+                  {
+                    "parameterName": "types",
+                    "queryName": "q_05_hour_change"
+                  },
+                  {
+                    "parameterName": "types",
+                    "queryName": "q_06_amount_distribution"
+                  },
+                  {
+                    "parameterName": "types",
+                    "queryName": "q_07_fraud_comparison"
+                  },
+                  {
+                    "parameterName": "types",
+                    "queryName": "q_08_type_risk"
+                  },
+                  {
+                    "parameterName": "types",
+                    "queryName": "q_09_flag_matrix"
+                  },
+                  {
+                    "parameterName": "types",
+                    "queryName": "q_10_flag_metrics"
+                  },
+                  {
+                    "parameterName": "types",
+                    "queryName": "q_11_origin_accounts"
+                  },
+                  {
+                    "parameterName": "types",
+                    "queryName": "q_12_destination_accounts"
+                  },
+                  {
+                    "parameterName": "types",
+                    "queryName": "q_13_concentration"
+                  },
+                  {
+                    "parameterName": "types",
+                    "queryName": "q_14_fraud_accounts"
+                  },
+                  {
+                    "parameterName": "types",
+                    "queryName": "q_15_balance_changes"
+                  },
+                  {
+                    "parameterName": "types",
+                    "queryName": "q_16_transactions"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Transaction Types"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "filter_fraud_labels",
+            "queries": [
+              {
+                "name": "choices",
+                "query": {
+                  "datasetName": "filter_choices",
+                  "fields": [
+                    {
+                      "name": "fraud_label",
+                      "expression": "`fraud_label`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_01_summary",
+                "query": {
+                  "datasetName": "01_summary",
+                  "parameters": [
+                    {
+                      "name": "fraud_labels",
+                      "keyword": "fraud_labels"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_02_by_type",
+                "query": {
+                  "datasetName": "02_by_type",
+                  "parameters": [
+                    {
+                      "name": "fraud_labels",
+                      "keyword": "fraud_labels"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_03_hourly",
+                "query": {
+                  "datasetName": "03_hourly",
+                  "parameters": [
+                    {
+                      "name": "fraud_labels",
+                      "keyword": "fraud_labels"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_04_hour_type",
+                "query": {
+                  "datasetName": "04_hour_type",
+                  "parameters": [
+                    {
+                      "name": "fraud_labels",
+                      "keyword": "fraud_labels"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_05_hour_change",
+                "query": {
+                  "datasetName": "05_hour_change",
+                  "parameters": [
+                    {
+                      "name": "fraud_labels",
+                      "keyword": "fraud_labels"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_06_amount_distribution",
+                "query": {
+                  "datasetName": "06_amount_distribution",
+                  "parameters": [
+                    {
+                      "name": "fraud_labels",
+                      "keyword": "fraud_labels"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_07_fraud_comparison",
+                "query": {
+                  "datasetName": "07_fraud_comparison",
+                  "parameters": [
+                    {
+                      "name": "fraud_labels",
+                      "keyword": "fraud_labels"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_08_type_risk",
+                "query": {
+                  "datasetName": "08_type_risk",
+                  "parameters": [
+                    {
+                      "name": "fraud_labels",
+                      "keyword": "fraud_labels"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_09_flag_matrix",
+                "query": {
+                  "datasetName": "09_flag_matrix",
+                  "parameters": [
+                    {
+                      "name": "fraud_labels",
+                      "keyword": "fraud_labels"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_10_flag_metrics",
+                "query": {
+                  "datasetName": "10_flag_metrics",
+                  "parameters": [
+                    {
+                      "name": "fraud_labels",
+                      "keyword": "fraud_labels"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_11_origin_accounts",
+                "query": {
+                  "datasetName": "11_origin_accounts",
+                  "parameters": [
+                    {
+                      "name": "fraud_labels",
+                      "keyword": "fraud_labels"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_12_destination_accounts",
+                "query": {
+                  "datasetName": "12_destination_accounts",
+                  "parameters": [
+                    {
+                      "name": "fraud_labels",
+                      "keyword": "fraud_labels"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_13_concentration",
+                "query": {
+                  "datasetName": "13_concentration",
+                  "parameters": [
+                    {
+                      "name": "fraud_labels",
+                      "keyword": "fraud_labels"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_14_fraud_accounts",
+                "query": {
+                  "datasetName": "14_fraud_accounts",
+                  "parameters": [
+                    {
+                      "name": "fraud_labels",
+                      "keyword": "fraud_labels"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_15_balance_changes",
+                "query": {
+                  "datasetName": "15_balance_changes",
+                  "parameters": [
+                    {
+                      "name": "fraud_labels",
+                      "keyword": "fraud_labels"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_16_transactions",
+                "query": {
+                  "datasetName": "16_transactions",
+                  "parameters": [
+                    {
+                      "name": "fraud_labels",
+                      "keyword": "fraud_labels"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "fraud_label",
+                    "queryName": "choices"
+                  },
+                  {
+                    "parameterName": "fraud_labels",
+                    "queryName": "q_01_summary"
+                  },
+                  {
+                    "parameterName": "fraud_labels",
+                    "queryName": "q_02_by_type"
+                  },
+                  {
+                    "parameterName": "fraud_labels",
+                    "queryName": "q_03_hourly"
+                  },
+                  {
+                    "parameterName": "fraud_labels",
+                    "queryName": "q_04_hour_type"
+                  },
+                  {
+                    "parameterName": "fraud_labels",
+                    "queryName": "q_05_hour_change"
+                  },
+                  {
+                    "parameterName": "fraud_labels",
+                    "queryName": "q_06_amount_distribution"
+                  },
+                  {
+                    "parameterName": "fraud_labels",
+                    "queryName": "q_07_fraud_comparison"
+                  },
+                  {
+                    "parameterName": "fraud_labels",
+                    "queryName": "q_08_type_risk"
+                  },
+                  {
+                    "parameterName": "fraud_labels",
+                    "queryName": "q_09_flag_matrix"
+                  },
+                  {
+                    "parameterName": "fraud_labels",
+                    "queryName": "q_10_flag_metrics"
+                  },
+                  {
+                    "parameterName": "fraud_labels",
+                    "queryName": "q_11_origin_accounts"
+                  },
+                  {
+                    "parameterName": "fraud_labels",
+                    "queryName": "q_12_destination_accounts"
+                  },
+                  {
+                    "parameterName": "fraud_labels",
+                    "queryName": "q_13_concentration"
+                  },
+                  {
+                    "parameterName": "fraud_labels",
+                    "queryName": "q_14_fraud_accounts"
+                  },
+                  {
+                    "parameterName": "fraud_labels",
+                    "queryName": "q_15_balance_changes"
+                  },
+                  {
+                    "parameterName": "fraud_labels",
+                    "queryName": "q_16_transactions"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Fraud Label"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 0,
+            "width": 6,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "filter_hour_min",
+            "queries": [
+              {
+                "name": "q_01_summary",
+                "query": {
+                  "datasetName": "01_summary",
+                  "parameters": [
+                    {
+                      "name": "hour_min",
+                      "keyword": "hour_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_02_by_type",
+                "query": {
+                  "datasetName": "02_by_type",
+                  "parameters": [
+                    {
+                      "name": "hour_min",
+                      "keyword": "hour_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_03_hourly",
+                "query": {
+                  "datasetName": "03_hourly",
+                  "parameters": [
+                    {
+                      "name": "hour_min",
+                      "keyword": "hour_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_04_hour_type",
+                "query": {
+                  "datasetName": "04_hour_type",
+                  "parameters": [
+                    {
+                      "name": "hour_min",
+                      "keyword": "hour_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_05_hour_change",
+                "query": {
+                  "datasetName": "05_hour_change",
+                  "parameters": [
+                    {
+                      "name": "hour_min",
+                      "keyword": "hour_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_06_amount_distribution",
+                "query": {
+                  "datasetName": "06_amount_distribution",
+                  "parameters": [
+                    {
+                      "name": "hour_min",
+                      "keyword": "hour_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_07_fraud_comparison",
+                "query": {
+                  "datasetName": "07_fraud_comparison",
+                  "parameters": [
+                    {
+                      "name": "hour_min",
+                      "keyword": "hour_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_08_type_risk",
+                "query": {
+                  "datasetName": "08_type_risk",
+                  "parameters": [
+                    {
+                      "name": "hour_min",
+                      "keyword": "hour_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_09_flag_matrix",
+                "query": {
+                  "datasetName": "09_flag_matrix",
+                  "parameters": [
+                    {
+                      "name": "hour_min",
+                      "keyword": "hour_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_10_flag_metrics",
+                "query": {
+                  "datasetName": "10_flag_metrics",
+                  "parameters": [
+                    {
+                      "name": "hour_min",
+                      "keyword": "hour_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_11_origin_accounts",
+                "query": {
+                  "datasetName": "11_origin_accounts",
+                  "parameters": [
+                    {
+                      "name": "hour_min",
+                      "keyword": "hour_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_12_destination_accounts",
+                "query": {
+                  "datasetName": "12_destination_accounts",
+                  "parameters": [
+                    {
+                      "name": "hour_min",
+                      "keyword": "hour_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_13_concentration",
+                "query": {
+                  "datasetName": "13_concentration",
+                  "parameters": [
+                    {
+                      "name": "hour_min",
+                      "keyword": "hour_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_14_fraud_accounts",
+                "query": {
+                  "datasetName": "14_fraud_accounts",
+                  "parameters": [
+                    {
+                      "name": "hour_min",
+                      "keyword": "hour_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_15_balance_changes",
+                "query": {
+                  "datasetName": "15_balance_changes",
+                  "parameters": [
+                    {
+                      "name": "hour_min",
+                      "keyword": "hour_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_16_transactions",
+                "query": {
+                  "datasetName": "16_transactions",
+                  "parameters": [
+                    {
+                      "name": "hour_min",
+                      "keyword": "hour_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-text-entry",
+              "encodings": {
+                "fields": [
+                  {
+                    "parameterName": "hour_min",
+                    "queryName": "q_01_summary"
+                  },
+                  {
+                    "parameterName": "hour_min",
+                    "queryName": "q_02_by_type"
+                  },
+                  {
+                    "parameterName": "hour_min",
+                    "queryName": "q_03_hourly"
+                  },
+                  {
+                    "parameterName": "hour_min",
+                    "queryName": "q_04_hour_type"
+                  },
+                  {
+                    "parameterName": "hour_min",
+                    "queryName": "q_05_hour_change"
+                  },
+                  {
+                    "parameterName": "hour_min",
+                    "queryName": "q_06_amount_distribution"
+                  },
+                  {
+                    "parameterName": "hour_min",
+                    "queryName": "q_07_fraud_comparison"
+                  },
+                  {
+                    "parameterName": "hour_min",
+                    "queryName": "q_08_type_risk"
+                  },
+                  {
+                    "parameterName": "hour_min",
+                    "queryName": "q_09_flag_matrix"
+                  },
+                  {
+                    "parameterName": "hour_min",
+                    "queryName": "q_10_flag_metrics"
+                  },
+                  {
+                    "parameterName": "hour_min",
+                    "queryName": "q_11_origin_accounts"
+                  },
+                  {
+                    "parameterName": "hour_min",
+                    "queryName": "q_12_destination_accounts"
+                  },
+                  {
+                    "parameterName": "hour_min",
+                    "queryName": "q_13_concentration"
+                  },
+                  {
+                    "parameterName": "hour_min",
+                    "queryName": "q_14_fraud_accounts"
+                  },
+                  {
+                    "parameterName": "hour_min",
+                    "queryName": "q_15_balance_changes"
+                  },
+                  {
+                    "parameterName": "hour_min",
+                    "queryName": "q_16_transactions"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "First Simulation Hour (1–744)"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 6,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "filter_hour_max",
+            "queries": [
+              {
+                "name": "q_01_summary",
+                "query": {
+                  "datasetName": "01_summary",
+                  "parameters": [
+                    {
+                      "name": "hour_max",
+                      "keyword": "hour_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_02_by_type",
+                "query": {
+                  "datasetName": "02_by_type",
+                  "parameters": [
+                    {
+                      "name": "hour_max",
+                      "keyword": "hour_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_03_hourly",
+                "query": {
+                  "datasetName": "03_hourly",
+                  "parameters": [
+                    {
+                      "name": "hour_max",
+                      "keyword": "hour_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_04_hour_type",
+                "query": {
+                  "datasetName": "04_hour_type",
+                  "parameters": [
+                    {
+                      "name": "hour_max",
+                      "keyword": "hour_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_05_hour_change",
+                "query": {
+                  "datasetName": "05_hour_change",
+                  "parameters": [
+                    {
+                      "name": "hour_max",
+                      "keyword": "hour_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_06_amount_distribution",
+                "query": {
+                  "datasetName": "06_amount_distribution",
+                  "parameters": [
+                    {
+                      "name": "hour_max",
+                      "keyword": "hour_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_07_fraud_comparison",
+                "query": {
+                  "datasetName": "07_fraud_comparison",
+                  "parameters": [
+                    {
+                      "name": "hour_max",
+                      "keyword": "hour_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_08_type_risk",
+                "query": {
+                  "datasetName": "08_type_risk",
+                  "parameters": [
+                    {
+                      "name": "hour_max",
+                      "keyword": "hour_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_09_flag_matrix",
+                "query": {
+                  "datasetName": "09_flag_matrix",
+                  "parameters": [
+                    {
+                      "name": "hour_max",
+                      "keyword": "hour_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_10_flag_metrics",
+                "query": {
+                  "datasetName": "10_flag_metrics",
+                  "parameters": [
+                    {
+                      "name": "hour_max",
+                      "keyword": "hour_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_11_origin_accounts",
+                "query": {
+                  "datasetName": "11_origin_accounts",
+                  "parameters": [
+                    {
+                      "name": "hour_max",
+                      "keyword": "hour_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_12_destination_accounts",
+                "query": {
+                  "datasetName": "12_destination_accounts",
+                  "parameters": [
+                    {
+                      "name": "hour_max",
+                      "keyword": "hour_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_13_concentration",
+                "query": {
+                  "datasetName": "13_concentration",
+                  "parameters": [
+                    {
+                      "name": "hour_max",
+                      "keyword": "hour_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_14_fraud_accounts",
+                "query": {
+                  "datasetName": "14_fraud_accounts",
+                  "parameters": [
+                    {
+                      "name": "hour_max",
+                      "keyword": "hour_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_15_balance_changes",
+                "query": {
+                  "datasetName": "15_balance_changes",
+                  "parameters": [
+                    {
+                      "name": "hour_max",
+                      "keyword": "hour_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_16_transactions",
+                "query": {
+                  "datasetName": "16_transactions",
+                  "parameters": [
+                    {
+                      "name": "hour_max",
+                      "keyword": "hour_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-text-entry",
+              "encodings": {
+                "fields": [
+                  {
+                    "parameterName": "hour_max",
+                    "queryName": "q_01_summary"
+                  },
+                  {
+                    "parameterName": "hour_max",
+                    "queryName": "q_02_by_type"
+                  },
+                  {
+                    "parameterName": "hour_max",
+                    "queryName": "q_03_hourly"
+                  },
+                  {
+                    "parameterName": "hour_max",
+                    "queryName": "q_04_hour_type"
+                  },
+                  {
+                    "parameterName": "hour_max",
+                    "queryName": "q_05_hour_change"
+                  },
+                  {
+                    "parameterName": "hour_max",
+                    "queryName": "q_06_amount_distribution"
+                  },
+                  {
+                    "parameterName": "hour_max",
+                    "queryName": "q_07_fraud_comparison"
+                  },
+                  {
+                    "parameterName": "hour_max",
+                    "queryName": "q_08_type_risk"
+                  },
+                  {
+                    "parameterName": "hour_max",
+                    "queryName": "q_09_flag_matrix"
+                  },
+                  {
+                    "parameterName": "hour_max",
+                    "queryName": "q_10_flag_metrics"
+                  },
+                  {
+                    "parameterName": "hour_max",
+                    "queryName": "q_11_origin_accounts"
+                  },
+                  {
+                    "parameterName": "hour_max",
+                    "queryName": "q_12_destination_accounts"
+                  },
+                  {
+                    "parameterName": "hour_max",
+                    "queryName": "q_13_concentration"
+                  },
+                  {
+                    "parameterName": "hour_max",
+                    "queryName": "q_14_fraud_accounts"
+                  },
+                  {
+                    "parameterName": "hour_max",
+                    "queryName": "q_15_balance_changes"
+                  },
+                  {
+                    "parameterName": "hour_max",
+                    "queryName": "q_16_transactions"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Last Simulation Hour (1–744)"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 2,
+            "width": 6,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "filter_amount_min",
+            "queries": [
+              {
+                "name": "q_01_summary",
+                "query": {
+                  "datasetName": "01_summary",
+                  "parameters": [
+                    {
+                      "name": "amount_min",
+                      "keyword": "amount_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_02_by_type",
+                "query": {
+                  "datasetName": "02_by_type",
+                  "parameters": [
+                    {
+                      "name": "amount_min",
+                      "keyword": "amount_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_03_hourly",
+                "query": {
+                  "datasetName": "03_hourly",
+                  "parameters": [
+                    {
+                      "name": "amount_min",
+                      "keyword": "amount_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_04_hour_type",
+                "query": {
+                  "datasetName": "04_hour_type",
+                  "parameters": [
+                    {
+                      "name": "amount_min",
+                      "keyword": "amount_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_05_hour_change",
+                "query": {
+                  "datasetName": "05_hour_change",
+                  "parameters": [
+                    {
+                      "name": "amount_min",
+                      "keyword": "amount_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_06_amount_distribution",
+                "query": {
+                  "datasetName": "06_amount_distribution",
+                  "parameters": [
+                    {
+                      "name": "amount_min",
+                      "keyword": "amount_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_07_fraud_comparison",
+                "query": {
+                  "datasetName": "07_fraud_comparison",
+                  "parameters": [
+                    {
+                      "name": "amount_min",
+                      "keyword": "amount_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_08_type_risk",
+                "query": {
+                  "datasetName": "08_type_risk",
+                  "parameters": [
+                    {
+                      "name": "amount_min",
+                      "keyword": "amount_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_09_flag_matrix",
+                "query": {
+                  "datasetName": "09_flag_matrix",
+                  "parameters": [
+                    {
+                      "name": "amount_min",
+                      "keyword": "amount_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_10_flag_metrics",
+                "query": {
+                  "datasetName": "10_flag_metrics",
+                  "parameters": [
+                    {
+                      "name": "amount_min",
+                      "keyword": "amount_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_11_origin_accounts",
+                "query": {
+                  "datasetName": "11_origin_accounts",
+                  "parameters": [
+                    {
+                      "name": "amount_min",
+                      "keyword": "amount_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_12_destination_accounts",
+                "query": {
+                  "datasetName": "12_destination_accounts",
+                  "parameters": [
+                    {
+                      "name": "amount_min",
+                      "keyword": "amount_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_13_concentration",
+                "query": {
+                  "datasetName": "13_concentration",
+                  "parameters": [
+                    {
+                      "name": "amount_min",
+                      "keyword": "amount_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_14_fraud_accounts",
+                "query": {
+                  "datasetName": "14_fraud_accounts",
+                  "parameters": [
+                    {
+                      "name": "amount_min",
+                      "keyword": "amount_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_15_balance_changes",
+                "query": {
+                  "datasetName": "15_balance_changes",
+                  "parameters": [
+                    {
+                      "name": "amount_min",
+                      "keyword": "amount_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_16_transactions",
+                "query": {
+                  "datasetName": "16_transactions",
+                  "parameters": [
+                    {
+                      "name": "amount_min",
+                      "keyword": "amount_min"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-text-entry",
+              "encodings": {
+                "fields": [
+                  {
+                    "parameterName": "amount_min",
+                    "queryName": "q_01_summary"
+                  },
+                  {
+                    "parameterName": "amount_min",
+                    "queryName": "q_02_by_type"
+                  },
+                  {
+                    "parameterName": "amount_min",
+                    "queryName": "q_03_hourly"
+                  },
+                  {
+                    "parameterName": "amount_min",
+                    "queryName": "q_04_hour_type"
+                  },
+                  {
+                    "parameterName": "amount_min",
+                    "queryName": "q_05_hour_change"
+                  },
+                  {
+                    "parameterName": "amount_min",
+                    "queryName": "q_06_amount_distribution"
+                  },
+                  {
+                    "parameterName": "amount_min",
+                    "queryName": "q_07_fraud_comparison"
+                  },
+                  {
+                    "parameterName": "amount_min",
+                    "queryName": "q_08_type_risk"
+                  },
+                  {
+                    "parameterName": "amount_min",
+                    "queryName": "q_09_flag_matrix"
+                  },
+                  {
+                    "parameterName": "amount_min",
+                    "queryName": "q_10_flag_metrics"
+                  },
+                  {
+                    "parameterName": "amount_min",
+                    "queryName": "q_11_origin_accounts"
+                  },
+                  {
+                    "parameterName": "amount_min",
+                    "queryName": "q_12_destination_accounts"
+                  },
+                  {
+                    "parameterName": "amount_min",
+                    "queryName": "q_13_concentration"
+                  },
+                  {
+                    "parameterName": "amount_min",
+                    "queryName": "q_14_fraud_accounts"
+                  },
+                  {
+                    "parameterName": "amount_min",
+                    "queryName": "q_15_balance_changes"
+                  },
+                  {
+                    "parameterName": "amount_min",
+                    "queryName": "q_16_transactions"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Minimum Amount"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 4,
+            "width": 6,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "filter_amount_max",
+            "queries": [
+              {
+                "name": "q_01_summary",
+                "query": {
+                  "datasetName": "01_summary",
+                  "parameters": [
+                    {
+                      "name": "amount_max",
+                      "keyword": "amount_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_02_by_type",
+                "query": {
+                  "datasetName": "02_by_type",
+                  "parameters": [
+                    {
+                      "name": "amount_max",
+                      "keyword": "amount_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_03_hourly",
+                "query": {
+                  "datasetName": "03_hourly",
+                  "parameters": [
+                    {
+                      "name": "amount_max",
+                      "keyword": "amount_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_04_hour_type",
+                "query": {
+                  "datasetName": "04_hour_type",
+                  "parameters": [
+                    {
+                      "name": "amount_max",
+                      "keyword": "amount_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_05_hour_change",
+                "query": {
+                  "datasetName": "05_hour_change",
+                  "parameters": [
+                    {
+                      "name": "amount_max",
+                      "keyword": "amount_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_06_amount_distribution",
+                "query": {
+                  "datasetName": "06_amount_distribution",
+                  "parameters": [
+                    {
+                      "name": "amount_max",
+                      "keyword": "amount_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_07_fraud_comparison",
+                "query": {
+                  "datasetName": "07_fraud_comparison",
+                  "parameters": [
+                    {
+                      "name": "amount_max",
+                      "keyword": "amount_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_08_type_risk",
+                "query": {
+                  "datasetName": "08_type_risk",
+                  "parameters": [
+                    {
+                      "name": "amount_max",
+                      "keyword": "amount_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_09_flag_matrix",
+                "query": {
+                  "datasetName": "09_flag_matrix",
+                  "parameters": [
+                    {
+                      "name": "amount_max",
+                      "keyword": "amount_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_10_flag_metrics",
+                "query": {
+                  "datasetName": "10_flag_metrics",
+                  "parameters": [
+                    {
+                      "name": "amount_max",
+                      "keyword": "amount_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_11_origin_accounts",
+                "query": {
+                  "datasetName": "11_origin_accounts",
+                  "parameters": [
+                    {
+                      "name": "amount_max",
+                      "keyword": "amount_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_12_destination_accounts",
+                "query": {
+                  "datasetName": "12_destination_accounts",
+                  "parameters": [
+                    {
+                      "name": "amount_max",
+                      "keyword": "amount_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_13_concentration",
+                "query": {
+                  "datasetName": "13_concentration",
+                  "parameters": [
+                    {
+                      "name": "amount_max",
+                      "keyword": "amount_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_14_fraud_accounts",
+                "query": {
+                  "datasetName": "14_fraud_accounts",
+                  "parameters": [
+                    {
+                      "name": "amount_max",
+                      "keyword": "amount_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_15_balance_changes",
+                "query": {
+                  "datasetName": "15_balance_changes",
+                  "parameters": [
+                    {
+                      "name": "amount_max",
+                      "keyword": "amount_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_16_transactions",
+                "query": {
+                  "datasetName": "16_transactions",
+                  "parameters": [
+                    {
+                      "name": "amount_max",
+                      "keyword": "amount_max"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-text-entry",
+              "encodings": {
+                "fields": [
+                  {
+                    "parameterName": "amount_max",
+                    "queryName": "q_01_summary"
+                  },
+                  {
+                    "parameterName": "amount_max",
+                    "queryName": "q_02_by_type"
+                  },
+                  {
+                    "parameterName": "amount_max",
+                    "queryName": "q_03_hourly"
+                  },
+                  {
+                    "parameterName": "amount_max",
+                    "queryName": "q_04_hour_type"
+                  },
+                  {
+                    "parameterName": "amount_max",
+                    "queryName": "q_05_hour_change"
+                  },
+                  {
+                    "parameterName": "amount_max",
+                    "queryName": "q_06_amount_distribution"
+                  },
+                  {
+                    "parameterName": "amount_max",
+                    "queryName": "q_07_fraud_comparison"
+                  },
+                  {
+                    "parameterName": "amount_max",
+                    "queryName": "q_08_type_risk"
+                  },
+                  {
+                    "parameterName": "amount_max",
+                    "queryName": "q_09_flag_matrix"
+                  },
+                  {
+                    "parameterName": "amount_max",
+                    "queryName": "q_10_flag_metrics"
+                  },
+                  {
+                    "parameterName": "amount_max",
+                    "queryName": "q_11_origin_accounts"
+                  },
+                  {
+                    "parameterName": "amount_max",
+                    "queryName": "q_12_destination_accounts"
+                  },
+                  {
+                    "parameterName": "amount_max",
+                    "queryName": "q_13_concentration"
+                  },
+                  {
+                    "parameterName": "amount_max",
+                    "queryName": "q_14_fraud_accounts"
+                  },
+                  {
+                    "parameterName": "amount_max",
+                    "queryName": "q_15_balance_changes"
+                  },
+                  {
+                    "parameterName": "amount_max",
+                    "queryName": "q_16_transactions"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Maximum Amount"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 4,
+            "width": 6,
+            "height": 2
+          }
+        }
+      ]
+    },
+    {
+      "name": "overview",
+      "displayName": "Overview",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "overview_intro",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# Overview\n\nSynthetic PaySim data • Validated reference: first 250,000 rows, 14 simulation hours • No currency assigned • Imported snapshot, not a live feed. Filters apply before aggregation; percentiles are approximate."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "overview_1",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "01_summary",
+                  "fields": [
+                    {
+                      "name": "transactions",
+                      "expression": "`transactions`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "frame": {
+                "showTitle": true,
+                "title": "Transactions"
+              },
+              "encodings": {
+                "value": {
+                  "fieldName": "transactions",
+                  "displayName": "Transactions",
+                  "format": {
+                    "type": "number",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "overview_2",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "01_summary",
+                  "fields": [
+                    {
+                      "name": "total_amount",
+                      "expression": "`total_amount`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "frame": {
+                "showTitle": true,
+                "title": "Total Amount"
+              },
+              "encodings": {
+                "value": {
+                  "fieldName": "total_amount",
+                  "displayName": "Total Amount",
+                  "format": {
+                    "type": "number",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 3,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "overview_3",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "01_summary",
+                  "fields": [
+                    {
+                      "name": "average_amount",
+                      "expression": "`average_amount`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "frame": {
+                "showTitle": true,
+                "title": "Average Amount"
+              },
+              "encodings": {
+                "value": {
+                  "fieldName": "average_amount",
+                  "displayName": "Average Amount",
+                  "format": {
+                    "type": "number",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 3,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "overview_4",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "01_summary",
+                  "fields": [
+                    {
+                      "name": "median_amount",
+                      "expression": "`median_amount`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "frame": {
+                "showTitle": true,
+                "title": "Approximate Median Amount"
+              },
+              "encodings": {
+                "value": {
+                  "fieldName": "median_amount",
+                  "displayName": "Approximate Median Amount",
+                  "format": {
+                    "type": "number",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 3,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "overview_5",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "01_summary",
+                  "fields": [
+                    {
+                      "name": "fraud_transactions",
+                      "expression": "`fraud_transactions`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "frame": {
+                "showTitle": true,
+                "title": "Fraudulent Transactions (PaySim Labels)"
+              },
+              "encodings": {
+                "value": {
+                  "fieldName": "fraud_transactions",
+                  "displayName": "Fraudulent Transactions (PaySim Labels)",
+                  "format": {
+                    "type": "number",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 6,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "overview_6",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "01_summary",
+                  "fields": [
+                    {
+                      "name": "fraud_rate",
+                      "expression": "`fraud_rate`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "frame": {
+                "showTitle": true,
+                "title": "Fraud Rate"
+              },
+              "encodings": {
+                "value": {
+                  "fieldName": "fraud_rate",
+                  "displayName": "Fraud Rate",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 4
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 6,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "overview_7",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "01_summary",
+                  "fields": [
+                    {
+                      "name": "fraud_amount",
+                      "expression": "`fraud_amount`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "frame": {
+                "showTitle": true,
+                "title": "Fraud Amount"
+              },
+              "encodings": {
+                "value": {
+                  "fieldName": "fraud_amount",
+                  "displayName": "Fraud Amount",
+                  "format": {
+                    "type": "number",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 6,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "overview_8",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "01_summary",
+                  "fields": [
+                    {
+                      "name": "fraud_amount_share",
+                      "expression": "`fraud_amount_share`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "frame": {
+                "showTitle": true,
+                "title": "Fraudulent Share of Total Amount"
+              },
+              "encodings": {
+                "value": {
+                  "fieldName": "fraud_amount_share",
+                  "displayName": "Fraudulent Share of Total Amount",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 4
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 6,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "overview_9",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "02_by_type",
+                  "fields": [
+                    {
+                      "name": "transaction_type",
+                      "expression": "`transaction_type`"
+                    },
+                    {
+                      "name": "transactions",
+                      "expression": "`transactions`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "frame": {
+                "showTitle": true,
+                "title": "Transactions by Type"
+              },
+              "encodings": {
+                "x": {
+                  "fieldName": "transaction_type",
+                  "displayName": "Type",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "transactions",
+                  "displayName": "Transactions",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 9,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "overview_10",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "02_by_type",
+                  "fields": [
+                    {
+                      "name": "transaction_type",
+                      "expression": "`transaction_type`"
+                    },
+                    {
+                      "name": "total_amount",
+                      "expression": "`total_amount`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "frame": {
+                "showTitle": true,
+                "title": "Amounts by Type"
+              },
+              "encodings": {
+                "x": {
+                  "fieldName": "transaction_type",
+                  "displayName": "Type",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "total_amount",
+                  "displayName": "Total Amount",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 9,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "overview_11",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "06_amount_distribution",
+                  "fields": [
+                    {
+                      "name": "amount_band",
+                      "expression": "`amount_band`"
+                    },
+                    {
+                      "name": "transactions",
+                      "expression": "`transactions`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "frame": {
+                "showTitle": true,
+                "title": "Amount Distribution — Transaction Counts"
+              },
+              "encodings": {
+                "x": {
+                  "fieldName": "amount_band",
+                  "displayName": "Amount Band",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "transactions",
+                  "displayName": "Transactions",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 15,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "overview_12",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "02_by_type",
+                  "fields": [
+                    {
+                      "name": "transaction_type",
+                      "expression": "`transaction_type`"
+                    },
+                    {
+                      "name": "transactions",
+                      "expression": "`transactions`"
+                    },
+                    {
+                      "name": "total_amount",
+                      "expression": "`total_amount`"
+                    },
+                    {
+                      "name": "average_amount",
+                      "expression": "`average_amount`"
+                    },
+                    {
+                      "name": "median_amount",
+                      "expression": "`median_amount`"
+                    },
+                    {
+                      "name": "fraud_transactions",
+                      "expression": "`fraud_transactions`"
+                    },
+                    {
+                      "name": "fraud_rate",
+                      "expression": "`fraud_rate`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "frame": {
+                "showTitle": true,
+                "title": "Summary by Type"
+              },
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "transaction_type",
+                    "displayName": "Type"
+                  },
+                  {
+                    "fieldName": "transactions",
+                    "displayName": "Transactions"
+                  },
+                  {
+                    "fieldName": "total_amount",
+                    "displayName": "Total Amount"
+                  },
+                  {
+                    "fieldName": "average_amount",
+                    "displayName": "Average Amount"
+                  },
+                  {
+                    "fieldName": "median_amount",
+                    "displayName": "Approximate Median"
+                  },
+                  {
+                    "fieldName": "fraud_transactions",
+                    "displayName": "Fraudulent Transactions"
+                  },
+                  {
+                    "fieldName": "fraud_rate",
+                    "displayName": "Fraud Rate",
+                    "format": {
+                      "type": "number-percent",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 4
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 15,
+            "width": 6,
+            "height": 6
+          }
+        }
+      ]
+    },
+    {
+      "name": "time",
+      "displayName": "Activity Over Time",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "time_intro",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# Activity Over Time\n\nRelative simulation hours, not calendar dates. The first hourly change is undefined. This sample does not support daily or weekly seasonality analysis or forecasting."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "time_1",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "03_hourly",
+                  "fields": [
+                    {
+                      "name": "simulation_step",
+                      "expression": "`simulation_step`"
+                    },
+                    {
+                      "name": "transactions",
+                      "expression": "`transactions`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "frame": {
+                "showTitle": true,
+                "title": "Transactions by Simulation Hour"
+              },
+              "encodings": {
+                "x": {
+                  "fieldName": "simulation_step",
+                  "displayName": "Simulation Hour",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "transactions",
+                  "displayName": "Transactions",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "time_2",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "03_hourly",
+                  "fields": [
+                    {
+                      "name": "simulation_step",
+                      "expression": "`simulation_step`"
+                    },
+                    {
+                      "name": "total_amount",
+                      "expression": "`total_amount`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "frame": {
+                "showTitle": true,
+                "title": "Amounts by Simulation Hour"
+              },
+              "encodings": {
+                "x": {
+                  "fieldName": "simulation_step",
+                  "displayName": "Simulation Hour",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "total_amount",
+                  "displayName": "Total Amount",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 3,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "time_3",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "04_hour_type",
+                  "fields": [
+                    {
+                      "name": "simulation_step",
+                      "expression": "`simulation_step`"
+                    },
+                    {
+                      "name": "transactions",
+                      "expression": "`transactions`"
+                    },
+                    {
+                      "name": "transaction_type",
+                      "expression": "`transaction_type`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "frame": {
+                "showTitle": true,
+                "title": "Transactions by Type and Hour"
+              },
+              "encodings": {
+                "x": {
+                  "fieldName": "simulation_step",
+                  "displayName": "Simulation Hour",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "transactions",
+                  "displayName": "Transactions",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "transaction_type",
+                  "displayName": "Type",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 9,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "time_4",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "03_hourly",
+                  "fields": [
+                    {
+                      "name": "simulation_step",
+                      "expression": "`simulation_step`"
+                    },
+                    {
+                      "name": "fraud_transactions",
+                      "expression": "`fraud_transactions`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "frame": {
+                "showTitle": true,
+                "title": "Fraudulent Transactions by Hour"
+              },
+              "encodings": {
+                "x": {
+                  "fieldName": "simulation_step",
+                  "displayName": "Simulation Hour",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "fraud_transactions",
+                  "displayName": "Fraudulent Transactions",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 9,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "time_5",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "05_hour_change",
+                  "fields": [
+                    {
+                      "name": "simulation_step",
+                      "expression": "`simulation_step`"
+                    },
+                    {
+                      "name": "transaction_change",
+                      "expression": "`transaction_change`"
+                    },
+                    {
+                      "name": "transaction_growth",
+                      "expression": "`transaction_growth`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "frame": {
+                "showTitle": true,
+                "title": "Change in Observed Transaction Counts"
+              },
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "simulation_step",
+                    "displayName": "Simulation Hour"
+                  },
+                  {
+                    "fieldName": "transaction_change",
+                    "displayName": "Count Change"
+                  },
+                  {
+                    "fieldName": "transaction_growth",
+                    "displayName": "Relative Change",
+                    "format": {
+                      "type": "number-percent",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 4
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 15,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "time_6",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "03_hourly",
+                  "fields": [
+                    {
+                      "name": "simulation_step",
+                      "expression": "`simulation_step`"
+                    },
+                    {
+                      "name": "transactions",
+                      "expression": "`transactions`"
+                    },
+                    {
+                      "name": "total_amount",
+                      "expression": "`total_amount`"
+                    },
+                    {
+                      "name": "average_amount",
+                      "expression": "`average_amount`"
+                    },
+                    {
+                      "name": "fraud_transactions",
+                      "expression": "`fraud_transactions`"
+                    },
+                    {
+                      "name": "fraud_rate",
+                      "expression": "`fraud_rate`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "frame": {
+                "showTitle": true,
+                "title": "Hourly Metrics"
+              },
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "simulation_step",
+                    "displayName": "Simulation Hour"
+                  },
+                  {
+                    "fieldName": "transactions",
+                    "displayName": "Transactions"
+                  },
+                  {
+                    "fieldName": "total_amount",
+                    "displayName": "Total Amount"
+                  },
+                  {
+                    "fieldName": "average_amount",
+                    "displayName": "Average Amount"
+                  },
+                  {
+                    "fieldName": "fraud_transactions",
+                    "displayName": "Fraudulent Transactions"
+                  },
+                  {
+                    "fieldName": "fraud_rate",
+                    "displayName": "Fraud Rate",
+                    "format": {
+                      "type": "number-percent",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 4
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 15,
+            "width": 6,
+            "height": 6
+          }
+        }
+      ]
+    },
+    {
+      "name": "fraud",
+      "displayName": "Fraud Analysis",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "fraud_intro",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# Fraud Analysis\n\nLabels identify known simulated fraud, not predictions. The PaySim flag is not our trained model. Undefined precision remains NULL; high accuracy can conceal poor fraud recall. Relative rates use the filtered population."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "fraud_1",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "08_type_risk",
+                  "fields": [
+                    {
+                      "name": "transaction_type",
+                      "expression": "`transaction_type`"
+                    },
+                    {
+                      "name": "fraud_rate",
+                      "expression": "`fraud_rate`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "frame": {
+                "showTitle": true,
+                "title": "Fraud Rate by Type"
+              },
+              "encodings": {
+                "x": {
+                  "fieldName": "transaction_type",
+                  "displayName": "Type",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "fraud_rate",
+                  "displayName": "Fraud Rate (ratio 0–1)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "fraud_2",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "08_type_risk",
+                  "fields": [
+                    {
+                      "name": "transaction_type",
+                      "expression": "`transaction_type`"
+                    },
+                    {
+                      "name": "transactions",
+                      "expression": "`transactions`"
+                    },
+                    {
+                      "name": "fraud_transactions",
+                      "expression": "`fraud_transactions`"
+                    },
+                    {
+                      "name": "fraud_rate",
+                      "expression": "`fraud_rate`"
+                    },
+                    {
+                      "name": "relative_rate",
+                      "expression": "`relative_rate`"
+                    },
+                    {
+                      "name": "fraud_amount",
+                      "expression": "`fraud_amount`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "frame": {
+                "showTitle": true,
+                "title": "Fraud by Type and Relative Rate"
+              },
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "transaction_type",
+                    "displayName": "Type"
+                  },
+                  {
+                    "fieldName": "transactions",
+                    "displayName": "Transactions"
+                  },
+                  {
+                    "fieldName": "fraud_transactions",
+                    "displayName": "Fraudulent Transactions"
+                  },
+                  {
+                    "fieldName": "fraud_rate",
+                    "displayName": "Fraud Rate",
+                    "format": {
+                      "type": "number-percent",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 4
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "relative_rate",
+                    "displayName": "Rate Relative to Filtered Population"
+                  },
+                  {
+                    "fieldName": "fraud_amount",
+                    "displayName": "Fraud Amount"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 3,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "fraud_3",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "07_fraud_comparison",
+                  "fields": [
+                    {
+                      "name": "fraud_label",
+                      "expression": "`fraud_label`"
+                    },
+                    {
+                      "name": "transactions",
+                      "expression": "`transactions`"
+                    },
+                    {
+                      "name": "total_amount",
+                      "expression": "`total_amount`"
+                    },
+                    {
+                      "name": "average_amount",
+                      "expression": "`average_amount`"
+                    },
+                    {
+                      "name": "median_amount",
+                      "expression": "`median_amount`"
+                    },
+                    {
+                      "name": "p90_amount",
+                      "expression": "`p90_amount`"
+                    },
+                    {
+                      "name": "p99_amount",
+                      "expression": "`p99_amount`"
+                    },
+                    {
+                      "name": "maximum_amount",
+                      "expression": "`maximum_amount`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "frame": {
+                "showTitle": true,
+                "title": "Fraud vs Non-fraud — Amount Distribution"
+              },
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "fraud_label",
+                    "displayName": "PaySim Label"
+                  },
+                  {
+                    "fieldName": "transactions",
+                    "displayName": "Transactions"
+                  },
+                  {
+                    "fieldName": "total_amount",
+                    "displayName": "Total Amount"
+                  },
+                  {
+                    "fieldName": "average_amount",
+                    "displayName": "Average Amount"
+                  },
+                  {
+                    "fieldName": "median_amount",
+                    "displayName": "Approximate Median"
+                  },
+                  {
+                    "fieldName": "p90_amount",
+                    "displayName": "90th Percentile Amount"
+                  },
+                  {
+                    "fieldName": "p99_amount",
+                    "displayName": "99th Percentile Amount"
+                  },
+                  {
+                    "fieldName": "maximum_amount",
+                    "displayName": "Maximum Amount"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 9,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "fraud_4",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "06_amount_distribution",
+                  "fields": [
+                    {
+                      "name": "amount_band",
+                      "expression": "`amount_band`"
+                    },
+                    {
+                      "name": "transactions",
+                      "expression": "`transactions`"
+                    },
+                    {
+                      "name": "fraud_transactions",
+                      "expression": "`fraud_transactions`"
+                    },
+                    {
+                      "name": "fraud_rate",
+                      "expression": "`fraud_rate`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "frame": {
+                "showTitle": true,
+                "title": "Fraud by Amount Band"
+              },
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "amount_band",
+                    "displayName": "Amount Band"
+                  },
+                  {
+                    "fieldName": "transactions",
+                    "displayName": "Transactions"
+                  },
+                  {
+                    "fieldName": "fraud_transactions",
+                    "displayName": "Fraudulent Transactions"
+                  },
+                  {
+                    "fieldName": "fraud_rate",
+                    "displayName": "Fraud Rate",
+                    "format": {
+                      "type": "number-percent",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 4
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 9,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "fraud_5",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "09_flag_matrix",
+                  "fields": [
+                    {
+                      "name": "outcome",
+                      "expression": "`outcome`"
+                    },
+                    {
+                      "name": "transactions",
+                      "expression": "`transactions`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "frame": {
+                "showTitle": true,
+                "title": "PaySim Flag vs Ground Truth"
+              },
+              "encodings": {
+                "x": {
+                  "fieldName": "outcome",
+                  "displayName": "Outcome",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "transactions",
+                  "displayName": "Transactions",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 15,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "fraud_6",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "10_flag_metrics",
+                  "fields": [
+                    {
+                      "name": "tp",
+                      "expression": "`tp`"
+                    },
+                    {
+                      "name": "fp",
+                      "expression": "`fp`"
+                    },
+                    {
+                      "name": "fn",
+                      "expression": "`fn`"
+                    },
+                    {
+                      "name": "tn",
+                      "expression": "`tn`"
+                    },
+                    {
+                      "name": "precision_flag",
+                      "expression": "`precision_flag`"
+                    },
+                    {
+                      "name": "recall_flag",
+                      "expression": "`recall_flag`"
+                    },
+                    {
+                      "name": "f1_flag",
+                      "expression": "`f1_flag`"
+                    },
+                    {
+                      "name": "accuracy_flag",
+                      "expression": "`accuracy_flag`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "frame": {
+                "showTitle": true,
+                "title": "Descriptive Evaluation of the PaySim Flag"
+              },
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "tp",
+                    "displayName": "True Positives"
+                  },
+                  {
+                    "fieldName": "fp",
+                    "displayName": "False Positives"
+                  },
+                  {
+                    "fieldName": "fn",
+                    "displayName": "False Negatives"
+                  },
+                  {
+                    "fieldName": "tn",
+                    "displayName": "True Negatives"
+                  },
+                  {
+                    "fieldName": "precision_flag",
+                    "displayName": "Flag Precision",
+                    "format": {
+                      "type": "number-percent",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 4
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "recall_flag",
+                    "displayName": "Flag Recall",
+                    "format": {
+                      "type": "number-percent",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 4
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "f1_flag",
+                    "displayName": "Flag F1 Score",
+                    "format": {
+                      "type": "number-percent",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 4
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "accuracy_flag",
+                    "displayName": "Flag Accuracy",
+                    "format": {
+                      "type": "number-percent",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 4
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 15,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "fraud_7",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "15_balance_changes",
+                  "fields": [
+                    {
+                      "name": "transaction_type",
+                      "expression": "`transaction_type`"
+                    },
+                    {
+                      "name": "fraud_label",
+                      "expression": "`fraud_label`"
+                    },
+                    {
+                      "name": "transactions",
+                      "expression": "`transactions`"
+                    },
+                    {
+                      "name": "average_amount",
+                      "expression": "`average_amount`"
+                    },
+                    {
+                      "name": "average_origin_change",
+                      "expression": "`average_origin_change`"
+                    },
+                    {
+                      "name": "average_destination_change",
+                      "expression": "`average_destination_change`"
+                    },
+                    {
+                      "name": "origin_zero_after",
+                      "expression": "`origin_zero_after`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "frame": {
+                "showTitle": true,
+                "title": "Observed Balance Changes per Transaction"
+              },
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "transaction_type",
+                    "displayName": "Type"
+                  },
+                  {
+                    "fieldName": "fraud_label",
+                    "displayName": "PaySim Label"
+                  },
+                  {
+                    "fieldName": "transactions",
+                    "displayName": "Transactions"
+                  },
+                  {
+                    "fieldName": "average_amount",
+                    "displayName": "Average Amount"
+                  },
+                  {
+                    "fieldName": "average_origin_change",
+                    "displayName": "Average Origin Balance Change"
+                  },
+                  {
+                    "fieldName": "average_destination_change",
+                    "displayName": "Average Destination Balance Change"
+                  },
+                  {
+                    "fieldName": "origin_zero_after",
+                    "displayName": "Origin Balance Zero After Transaction"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 21,
+            "width": 12,
+            "height": 6
+          }
+        }
+      ]
+    },
+    {
+      "name": "accounts",
+      "displayName": "Accounts and Transactions",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "accounts_intro",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# Accounts and Transactions\n\nDisplay limits: 20 origin accounts, 20 destination accounts, 30 fraud-related account roles and 500 transaction details. One fraudulent transaction can appear in both account roles; role counts are not unique fraud counts. Summed transaction balances are not consolidated account balances."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "accounts_1",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "11_origin_accounts",
+                  "fields": [
+                    {
+                      "name": "origin_account",
+                      "expression": "`origin_account`"
+                    },
+                    {
+                      "name": "transactions",
+                      "expression": "`transactions`"
+                    },
+                    {
+                      "name": "total_amount",
+                      "expression": "`total_amount`"
+                    },
+                    {
+                      "name": "distinct_counterparties",
+                      "expression": "`distinct_counterparties`"
+                    },
+                    {
+                      "name": "fraud_transactions",
+                      "expression": "`fraud_transactions`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "frame": {
+                "showTitle": true,
+                "title": "Top 20 Origin Accounts by Amount"
+              },
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "origin_account",
+                    "displayName": "Origin Account"
+                  },
+                  {
+                    "fieldName": "transactions",
+                    "displayName": "Transactions"
+                  },
+                  {
+                    "fieldName": "total_amount",
+                    "displayName": "Total Amount"
+                  },
+                  {
+                    "fieldName": "distinct_counterparties",
+                    "displayName": "Distinct Counterparties"
+                  },
+                  {
+                    "fieldName": "fraud_transactions",
+                    "displayName": "Fraudulent Transactions"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "accounts_2",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "12_destination_accounts",
+                  "fields": [
+                    {
+                      "name": "destination_account",
+                      "expression": "`destination_account`"
+                    },
+                    {
+                      "name": "transactions",
+                      "expression": "`transactions`"
+                    },
+                    {
+                      "name": "total_amount",
+                      "expression": "`total_amount`"
+                    },
+                    {
+                      "name": "distinct_counterparties",
+                      "expression": "`distinct_counterparties`"
+                    },
+                    {
+                      "name": "fraud_transactions",
+                      "expression": "`fraud_transactions`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "frame": {
+                "showTitle": true,
+                "title": "Top 20 Destination Accounts by Amount"
+              },
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "destination_account",
+                    "displayName": "Destination Account"
+                  },
+                  {
+                    "fieldName": "transactions",
+                    "displayName": "Transactions"
+                  },
+                  {
+                    "fieldName": "total_amount",
+                    "displayName": "Total Amount"
+                  },
+                  {
+                    "fieldName": "distinct_counterparties",
+                    "displayName": "Distinct Counterparties"
+                  },
+                  {
+                    "fieldName": "fraud_transactions",
+                    "displayName": "Fraudulent Transactions"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 3,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "accounts_3",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "13_concentration",
+                  "fields": [
+                    {
+                      "name": "account_rank",
+                      "expression": "`account_rank`"
+                    },
+                    {
+                      "name": "cumulative_share",
+                      "expression": "`cumulative_share`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "frame": {
+                "showTitle": true,
+                "title": "Cumulative Amount Share — Top 20 Origin Accounts"
+              },
+              "encodings": {
+                "x": {
+                  "fieldName": "account_rank",
+                  "displayName": "Rank",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "cumulative_share",
+                  "displayName": "Cumulative Share (ratio 0–1)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 9,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "accounts_4",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "14_fraud_accounts",
+                  "fields": [
+                    {
+                      "name": "account_role",
+                      "expression": "`account_role`"
+                    },
+                    {
+                      "name": "account",
+                      "expression": "`account`"
+                    },
+                    {
+                      "name": "fraud_participations",
+                      "expression": "`fraud_participations`"
+                    },
+                    {
+                      "name": "fraud_amount",
+                      "expression": "`fraud_amount`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "frame": {
+                "showTitle": true,
+                "title": "Fraud-related Accounts by Role"
+              },
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "account_role",
+                    "displayName": "Role"
+                  },
+                  {
+                    "fieldName": "account",
+                    "displayName": "Account"
+                  },
+                  {
+                    "fieldName": "fraud_participations",
+                    "displayName": "Fraud-related Role Count"
+                  },
+                  {
+                    "fieldName": "fraud_amount",
+                    "displayName": "Fraud Amount"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 9,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "accounts_5",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "16_transactions",
+                  "fields": [
+                    {
+                      "name": "transaction_key",
+                      "expression": "`transaction_key`"
+                    },
+                    {
+                      "name": "simulation_step",
+                      "expression": "`simulation_step`"
+                    },
+                    {
+                      "name": "transaction_type",
+                      "expression": "`transaction_type`"
+                    },
+                    {
+                      "name": "origin_account",
+                      "expression": "`origin_account`"
+                    },
+                    {
+                      "name": "destination_account",
+                      "expression": "`destination_account`"
+                    },
+                    {
+                      "name": "amount",
+                      "expression": "`amount`"
+                    },
+                    {
+                      "name": "is_fraud",
+                      "expression": "`is_fraud`"
+                    },
+                    {
+                      "name": "is_flagged_fraud",
+                      "expression": "`is_flagged_fraud`"
+                    },
+                    {
+                      "name": "origin_balance_before",
+                      "expression": "`origin_balance_before`"
+                    },
+                    {
+                      "name": "origin_balance_after",
+                      "expression": "`origin_balance_after`"
+                    },
+                    {
+                      "name": "destination_balance_before",
+                      "expression": "`destination_balance_before`"
+                    },
+                    {
+                      "name": "destination_balance_after",
+                      "expression": "`destination_balance_after`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "frame": {
+                "showTitle": true,
+                "title": "Filtered Transactions — Up to 500 Rows"
+              },
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "transaction_key",
+                    "displayName": "Transaction ID"
+                  },
+                  {
+                    "fieldName": "simulation_step",
+                    "displayName": "Simulation Hour"
+                  },
+                  {
+                    "fieldName": "transaction_type",
+                    "displayName": "Type"
+                  },
+                  {
+                    "fieldName": "origin_account",
+                    "displayName": "Origin Account"
+                  },
+                  {
+                    "fieldName": "destination_account",
+                    "displayName": "Destination Account"
+                  },
+                  {
+                    "fieldName": "amount",
+                    "displayName": "Amount"
+                  },
+                  {
+                    "fieldName": "is_fraud",
+                    "displayName": "Fraud Label"
+                  },
+                  {
+                    "fieldName": "is_flagged_fraud",
+                    "displayName": "PaySim Flag"
+                  },
+                  {
+                    "fieldName": "origin_balance_before",
+                    "displayName": "Origin Balance Before"
+                  },
+                  {
+                    "fieldName": "origin_balance_after",
+                    "displayName": "Origin Balance After"
+                  },
+                  {
+                    "fieldName": "destination_balance_before",
+                    "displayName": "Destination Balance Before"
+                  },
+                  {
+                    "fieldName": "destination_balance_after",
+                    "displayName": "Destination Balance After"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 15,
+            "width": 12,
+            "height": 9
+          }
+        }
+      ]
+    }
+  ]
+}
