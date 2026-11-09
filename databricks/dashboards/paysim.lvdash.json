@@ -4338,7 +4338,7 @@
                     "fieldName": "total_amount",
                     "displayName": "Total Amount",
                     "format": {
-                      "type": "number",
+                      "type": "number-plain",
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
@@ -4351,7 +4351,7 @@
                     "fieldName": "average_amount",
                     "displayName": "Average Amount",
                     "format": {
-                      "type": "number",
+                      "type": "number-plain",
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
@@ -4364,7 +4364,7 @@
                     "fieldName": "median_amount",
                     "displayName": "Approximate Median",
                     "format": {
-                      "type": "number",
+                      "type": "number-plain",
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
@@ -4405,7 +4405,7 @@
             "x": 0,
             "y": 19,
             "width": 12,
-            "height": 3
+            "height": 5
           }
         }
       ]
@@ -4896,7 +4896,7 @@
                     "fieldName": "transaction_change",
                     "displayName": "Count Change",
                     "format": {
-                      "type": "number",
+                      "type": "number-plain",
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
@@ -5004,7 +5004,7 @@
                     "fieldName": "total_amount",
                     "displayName": "Total Amount",
                     "format": {
-                      "type": "number",
+                      "type": "number-plain",
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
@@ -5017,7 +5017,7 @@
                     "fieldName": "average_amount",
                     "displayName": "Average Amount",
                     "format": {
-                      "type": "number",
+                      "type": "number-plain",
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
@@ -5265,7 +5265,7 @@
                     "fieldName": "relative_rate",
                     "displayName": "Rate vs Population (×)",
                     "format": {
-                      "type": "number",
+                      "type": "number-plain",
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
@@ -5278,7 +5278,7 @@
                     "fieldName": "fraud_amount",
                     "displayName": "Fraud Amount",
                     "format": {
-                      "type": "number",
+                      "type": "number-plain",
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
@@ -5295,7 +5295,7 @@
             "x": 0,
             "y": 11,
             "width": 12,
-            "height": 3
+            "height": 5
           }
         },
         {
@@ -5374,7 +5374,7 @@
                     "fieldName": "total_amount",
                     "displayName": "Total Amount",
                     "format": {
-                      "type": "number",
+                      "type": "number-plain",
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
@@ -5387,7 +5387,7 @@
                     "fieldName": "average_amount",
                     "displayName": "Average Amount",
                     "format": {
-                      "type": "number",
+                      "type": "number-plain",
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
@@ -5400,7 +5400,7 @@
                     "fieldName": "median_amount",
                     "displayName": "Approximate Median",
                     "format": {
-                      "type": "number",
+                      "type": "number-plain",
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
@@ -5413,7 +5413,7 @@
                     "fieldName": "p90_amount",
                     "displayName": "90th Percentile Amount",
                     "format": {
-                      "type": "number",
+                      "type": "number-plain",
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
@@ -5426,7 +5426,7 @@
                     "fieldName": "p99_amount",
                     "displayName": "99th Percentile Amount",
                     "format": {
-                      "type": "number",
+                      "type": "number-plain",
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
@@ -5439,7 +5439,7 @@
                     "fieldName": "maximum_amount",
                     "displayName": "Maximum Amount",
                     "format": {
-                      "type": "number",
+                      "type": "number-plain",
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
@@ -5454,7 +5454,7 @@
           },
           "position": {
             "x": 0,
-            "y": 14,
+            "y": 16,
             "width": 12,
             "height": 3
           }
@@ -5502,7 +5502,7 @@
                     "fieldName": "amount_band",
                     "displayName": "Amount Band",
                     "format": {
-                      "type": "number",
+                      "type": "number-plain",
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
@@ -5554,9 +5554,9 @@
           },
           "position": {
             "x": 0,
-            "y": 17,
+            "y": 19,
             "width": 12,
-            "height": 3
+            "height": 5
           }
         },
         {
@@ -5814,7 +5814,7 @@
           },
           "position": {
             "x": 0,
-            "y": 20,
+            "y": 24,
             "width": 12,
             "height": 2
           }
@@ -5895,7 +5895,7 @@
                     "fieldName": "average_amount",
                     "displayName": "Average Amount",
                     "format": {
-                      "type": "number",
+                      "type": "number-plain",
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
@@ -5908,7 +5908,7 @@
                     "fieldName": "average_origin_change",
                     "displayName": "Average Origin Balance Change",
                     "format": {
-                      "type": "number",
+                      "type": "number-plain",
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
@@ -5921,7 +5921,7 @@
                     "fieldName": "average_destination_change",
                     "displayName": "Average Destination Balance Change",
                     "format": {
-                      "type": "number",
+                      "type": "number-plain",
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
@@ -5940,9 +5940,9 @@
           },
           "position": {
             "x": 0,
-            "y": 22,
+            "y": 26,
             "width": 12,
-            "height": 4
+            "height": 6
           }
         },
         {
@@ -6178,7 +6178,7 @@
                     "fieldName": "total_amount",
                     "displayName": "Total Amount",
                     "format": {
-                      "type": "number",
+                      "type": "number-plain",
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
@@ -6288,7 +6288,7 @@
                     "fieldName": "total_amount",
                     "displayName": "Total Amount",
                     "format": {
-                      "type": "number",
+                      "type": "number-plain",
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
@@ -6495,7 +6495,7 @@
                     "fieldName": "fraud_amount",
                     "displayName": "Fraud Amount",
                     "format": {
-                      "type": "number",
+                      "type": "number-plain",
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
@@ -6603,7 +6603,7 @@
                     "fieldName": "amount",
                     "displayName": "Amount",
                     "format": {
-                      "type": "number",
+                      "type": "number-plain",
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
@@ -6716,7 +6716,7 @@
                     "fieldName": "origin_balance_before",
                     "displayName": "Origin Balance Before",
                     "format": {
-                      "type": "number",
+                      "type": "number-plain",
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
@@ -6729,7 +6729,7 @@
                     "fieldName": "origin_balance_after",
                     "displayName": "Origin Balance After",
                     "format": {
-                      "type": "number",
+                      "type": "number-plain",
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
@@ -6742,7 +6742,7 @@
                     "fieldName": "destination_balance_before",
                     "displayName": "Destination Balance Before",
                     "format": {
-                      "type": "number",
+                      "type": "number-plain",
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
@@ -6755,7 +6755,7 @@
                     "fieldName": "destination_balance_after",
                     "displayName": "Destination Balance After",
                     "format": {
-                      "type": "number",
+                      "type": "number-plain",
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2

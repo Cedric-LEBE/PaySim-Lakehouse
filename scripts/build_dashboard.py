@@ -21,7 +21,7 @@ COUNT_FIELDS = {'transactions', 'fraud_transactions', 'distinct_counterparties',
 def number_format(field, compact=False):
     if field in PERCENT or field == 'fraud_amount_share':
         return {'type': 'number-percent', 'decimalPlaces': {'type': 'max', 'places': 4}}
-    result = {'type': 'number-plain' if field in COUNT_FIELDS else 'number',
+    result = {'type': 'number-plain',
               'decimalPlaces': {'type': 'max', 'places': 0 if field in COUNT_FIELDS else 2},
               'abbreviation': 'none', 'hideGroupSeparator': False}
     if compact:
@@ -112,7 +112,7 @@ def polish(definition):
             charts[0]['position'].update(x=0,y=8,width=6,height=6)
             charts[1]['position'].update(x=6,y=8,width=6,height=6)
             charts[2]['position'].update(x=0,y=14,width=12,height=5)
-            charts[3]['position'].update(x=0,y=19,width=12,height=3)
+            charts[3]['position'].update(x=0,y=19,width=12,height=5)
             page['layout'] = [layout[0],*cards,*charts]
         elif page['name'] == 'time':
             for i,item in enumerate(layout[1:5]):
@@ -124,7 +124,7 @@ def polish(definition):
             for i,item in enumerate([chart,flag]):
                 item['position'].update(x=i*6,y=2,width=6,height=6)
             y = 11
-            for item, height in [(risk,3),(comparison,3),(bands,3),(metrics,2),(balance,4)]:
+            for item, height in [(risk,5),(comparison,3),(bands,5),(metrics,2),(balance,6)]:
                 item['position'].update(x=0,y=y,width=12,height=height)
                 y += height
             # Detail counters keep the rare flag outcomes visible beside the full matrix.

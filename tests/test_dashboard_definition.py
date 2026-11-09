@@ -125,6 +125,25 @@ class DatasetSeriesTests(unittest.TestCase):
         self.assertGreaterEqual(checked,5)
 
 class DashboardFinishingTests(unittest.TestCase):
+    def test_table_amounts_keep_numeric_projection_and_plain_grouped_format(self):
+        for page in builder.build()['pages']:
+            for item in page['layout']:
+                widget = item['widget']
+                if widget.get('spec', {}).get('widgetType') != 'table':
+                    continue
+                fields = {f['name']: f['expression'] for f in widget['queries'][0]['query']['fields']}
+                for column in widget['spec']['encodings']['columns']:
+                    field = column['fieldName']
+                    if ('amount' in field or 'balance' in field) and field not in builder.PERCENT:
+                        self.assertEqual(column['format']['type'], 'number-plain')
+                        self.assertFalse(column['format']['hideGroupSeparator'])
+                        self.assertEqual(fields[field], '`' + field + '`')
+        pages = {p['name']: p for p in builder.build()['pages']}
+        for page_name, title, minimum in [('overview','Summary by Type',5), ('fraud','Fraud by Type and Relative Rate',5), ('fraud','Fraud by Amount Band',5), ('fraud','Observed Balance Changes per Transaction',6)]:
+            item = next(i for i in pages[page_name]['layout'] if i['widget'].get('spec',{}).get('frame',{}).get('title') == title)
+            self.assertGreaterEqual(item['position']['height'], minimum)
+
+
     def test_band_order_and_flag_detail_remain_visible(self):
         definition = builder.build()
         pages = {p['name']: p for p in definition['pages']}
