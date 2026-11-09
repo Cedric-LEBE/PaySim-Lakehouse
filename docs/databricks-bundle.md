@@ -62,7 +62,7 @@ Le bundle a passé la validation stricte et a été déployé dans la cible `dev
 BANKING_SPARK_APP=tests/integration/dashboard_analytics_check.py bash scripts/bronze.sh
 ```
 
-Le contrôle local lit l'étoile publiée de 250 000 faits. Il exécute les seize analyses avec paramètres liés, réconcilie les montants et volumes, vérifie les filtres combinés et le cas vide. Les trente-neuf tests unitaires incluent la synchronisation du JSON généré, les références des widgets et les liaisons des paramètres. La validation stricte DAB et l'acceptation de la ressource par l'API complètent ces contrôles ; l'affichage et l'interaction finale des filtres doivent être vérifiés dans l'éditeur Databricks.
+Le contrôle local lit l'étoile publiée de 250 000 faits. Il exécute les seize analyses avec paramètres liés, réconcilie les montants et volumes, vérifie les filtres combinés et le cas vide. Les quarante tests unitaires incluent la synchronisation du JSON généré, les références des widgets et les liaisons des paramètres. La validation stricte DAB et l'acceptation de la ressource par l'API complètent ces contrôles ; l'affichage et l'interaction finale des filtres doivent être vérifiés dans l'éditeur Databricks.
 
 Modifier les SQL ou le générateur, régénérer le JSON puis déployer à nouveau. Une modification manuelle du dashboard géré par DAB peut être remplacée au déploiement suivant ; reporter les changements souhaités dans le dépôt. Ne pas lier ce bundle au dashboard manuel sans décision explicite.
 
@@ -72,7 +72,7 @@ Références : [ressources DAB](https://docs.databricks.com/aws/en/dev-tools/bun
 
 Le nouvel instantané `workspace.paysim_20261109t205841z_8ed6f88b` contient **6 362 620 transactions**, dont **8 213 fraudes**, sur les heures simulées 1 à 743. Les KPI ont été rapprochés du manifeste S3 : montant total `1144392944759.77`, montant frauduleux `12056415427.84`. Le taux de fraude est environ 0,129082 %, affiché à 0,1291 % selon la précision choisie.
 
-La refonte conserve les 17 datasets (16 analyses et choix de filtres), leurs SQL et leurs paramètres. Elle applique un thème natif en modes clair et sombre : fond bleu-gris, cartes bleu très clair, texte bleu marine, couleurs stables par type et corail pour les séries de fraude. Le fond des cartes provient du thème global : aucune propriété non documentée de couleur individuelle de compteur n'est injectée.
+La refonte conserve les 17 datasets (16 analyses et choix de filtres), les calculs métier et leurs paramètres. Quatre datasets ajoutent deux colonnes de présentation constantes pour leurs légendes, sans modifier les agrégats ; leur tri final est conservé explicitement. Elle applique un thème natif en modes clair et sombre : fond bleu-gris, cartes bleu très clair, texte bleu marine, couleurs stables par type et corail pour les séries de fraude. Le fond des cartes provient du thème global : aucune propriété non documentée de couleur individuelle de compteur n'est injectée.
 
 La locale du dashboard est fixée à `en-US`. Les compteurs de transactions et fraudes affichent des entiers complets ; les montants de synthèse sont compacts, sans symbole monétaire. Les ratios gardent leurs valeurs 0–1 et reçoivent un format pourcentage ; les rangs et heures restent numériques. Les textes ne figent plus l'ancien échantillon de 250 000 lignes / 14 heures, et ne présentent pas les heures simulées comme des dates calendaires ou des preuves de saisonnalité réelle.
 
@@ -81,3 +81,8 @@ Les introductions passent de trois à deux unités de grille. Les quatre KPI pri
 Les tests de présentation couvrent les chevauchements, les largeurs, les liaisons de champs, le formatage des axes sans multiplication des ratios, les entiers exacts, la suppression des anciennes références et la disponibilité des soldes. Ils complètent les contrôles SQL et le rapprochement des KPI avec le manifeste complet. L'API accepte la définition du brouillon ; l'apparence finale, notamment le rendu des formats selon le client, doit encore être inspectée visuellement après déploiement.
 
 Pour déployer sans revenir aux anciens paramètres par défaut, conserver explicitement le schéma, l'URL S3 et le volume de l'instantané complet. Le déploiement du dashboard ne nécessite ni de relancer l'import ni de démarrer EC2. La publication doit conserver les réglages d'identifiants et les droits de partage existants.
+
+
+### Correctifs après contrôle visuel
+
+Les captures ont révélé des légendes vides pour les séries constantes, ainsi que des compteurs abrégés malgré un format sans abréviation implicite. Les datasets 03, 06, 08 et 13 produisent désormais `_banking_series` et `_fraud_series` dans SQL ; les widgets sélectionnent leurs valeurs réelles, ce qui permet le mapping bleu/corail. Les compteurs de transactions et de fraudes fixent `abbreviation: none` et utilisent la valeur brute du template natif `{{ @ }}`. Les montants restent volontairement compacts. Les axes de taux et la disposition déjà validés visuellement sont conservés.

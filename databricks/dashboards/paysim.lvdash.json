@@ -220,6 +220,8 @@
       "name": "03_hourly",
       "displayName": "Hourly",
       "queryLines": [
+        "SELECT presentation.*, 'Banking activity' AS _banking_series, 'Fraud labels' AS _fraud_series\n",
+        "FROM (\n",
         "WITH filtered AS (\n",
         "  SELECT * FROM transactions_dashboard\n",
         "  WHERE (size(:types) = 0 OR array_contains(:types, transaction_type))\n",
@@ -231,7 +233,9 @@
         "SELECT simulation_step, COUNT(*) AS transactions, SUM(amount) AS total_amount,\n",
         " AVG(amount) AS average_amount, SUM(is_fraud) AS fraud_transactions, AVG(is_fraud) AS fraud_rate,\n",
         " SUM(CASE WHEN is_fraud=1 THEN amount ELSE 0 END) AS fraud_amount\n",
-        "FROM filtered GROUP BY simulation_step ORDER BY simulation_step\n"
+        "FROM filtered GROUP BY simulation_step ORDER BY simulation_step\n",
+        ") presentation\n",
+        "ORDER BY simulation_step\n"
       ],
       "parameters": [
         {
@@ -533,6 +537,8 @@
       "name": "06_amount_distribution",
       "displayName": "Amount Distribution",
       "queryLines": [
+        "SELECT presentation.*, 'Banking activity' AS _banking_series, 'Fraud labels' AS _fraud_series\n",
+        "FROM (\n",
         "WITH filtered AS (\n",
         "  SELECT * FROM transactions_dashboard\n",
         "  WHERE (size(:types) = 0 OR array_contains(:types, transaction_type))\n",
@@ -548,7 +554,9 @@
         " WHEN amount<1000000 THEN '100,000 to <1,000,000' ELSE '1,000,000+' END AS amount_band,\n",
         " CASE WHEN amount=0 THEN 0 WHEN amount<1000 THEN 1 WHEN amount<10000 THEN 2\n",
         " WHEN amount<100000 THEN 3 WHEN amount<1000000 THEN 4 ELSE 5 END AS band_order FROM filtered)\n",
-        "GROUP BY amount_band ORDER BY band_order\n"
+        "GROUP BY amount_band ORDER BY band_order\n",
+        ") presentation\n",
+        "ORDER BY band_order\n"
       ],
       "parameters": [
         {
@@ -747,6 +755,8 @@
       "name": "08_type_risk",
       "displayName": "Type Risk",
       "queryLines": [
+        "SELECT presentation.*, 'Banking activity' AS _banking_series, 'Fraud labels' AS _fraud_series\n",
+        "FROM (\n",
         "WITH filtered AS (\n",
         "  SELECT * FROM transactions_dashboard\n",
         "  WHERE (size(:types) = 0 OR array_contains(:types, transaction_type))\n",
@@ -758,7 +768,9 @@
         "SELECT transaction_type,COUNT(*) AS transactions,SUM(is_fraud) AS fraud_transactions,\n",
         " AVG(is_fraud) AS fraud_rate,AVG(is_fraud)/(SELECT NULLIF(AVG(is_fraud),0) FROM filtered) AS relative_rate,\n",
         " SUM(CASE WHEN is_fraud=1 THEN amount ELSE 0 END) AS fraud_amount\n",
-        "FROM filtered GROUP BY transaction_type ORDER BY fraud_transactions DESC\n"
+        "FROM filtered GROUP BY transaction_type ORDER BY fraud_transactions DESC\n",
+        ") presentation\n",
+        "ORDER BY fraud_transactions DESC\n"
       ],
       "parameters": [
         {
@@ -1273,6 +1285,8 @@
       "name": "13_concentration",
       "displayName": "Concentration",
       "queryLines": [
+        "SELECT presentation.*, 'Banking activity' AS _banking_series, 'Fraud labels' AS _fraud_series\n",
+        "FROM (\n",
         "WITH filtered AS (\n",
         "  SELECT * FROM transactions_dashboard\n",
         "  WHERE (size(:types) = 0 OR array_contains(:types, transaction_type))\n",
@@ -1287,7 +1301,9 @@
         " /NULLIF(SUM(total_amount) OVER(),0) AS cumulative_share\n",
         "FROM (SELECT origin_account,SUM(amount) AS total_amount,\n",
         " ROW_NUMBER() OVER(ORDER BY SUM(amount) DESC,origin_account) AS account_rank\n",
-        " FROM filtered GROUP BY origin_account)) WHERE account_rank<=20 ORDER BY account_rank\n"
+        " FROM filtered GROUP BY origin_account)) WHERE account_rank<=20 ORDER BY account_rank\n",
+        ") presentation\n",
+        "ORDER BY account_rank\n"
       ],
       "parameters": [
         {
@@ -3579,8 +3595,10 @@
                     "decimalPlaces": {
                       "type": "max",
                       "places": 0
-                    }
-                  }
+                    },
+                    "abbreviation": "none"
+                  },
+                  "formatTemplate": "{{ @ }}"
                 }
               }
             }
@@ -3674,8 +3692,10 @@
                     "decimalPlaces": {
                       "type": "max",
                       "places": 0
-                    }
-                  }
+                    },
+                    "abbreviation": "none"
+                  },
+                  "formatTemplate": "{{ @ }}"
                 }
               }
             }
@@ -4145,8 +4165,8 @@
                       "expression": "`transactions`"
                     },
                     {
-                      "name": "_metric_series",
-                      "expression": "'Banking activity'"
+                      "name": "_banking_series",
+                      "expression": "`_banking_series`"
                     }
                   ],
                   "disaggregated": true
@@ -4184,8 +4204,8 @@
                   }
                 },
                 "color": {
-                  "fieldName": "_metric_series",
-                  "displayName": "Metric",
+                  "fieldName": "_banking_series",
+                  "displayName": "Series",
                   "scale": {
                     "type": "categorical",
                     "mappings": [
@@ -4279,7 +4299,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 0
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -4290,7 +4311,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -4301,7 +4323,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -4312,7 +4335,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -4323,7 +4347,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 0
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -4390,8 +4415,8 @@
                       "expression": "`transactions`"
                     },
                     {
-                      "name": "_metric_series",
-                      "expression": "'Banking activity'"
+                      "name": "_banking_series",
+                      "expression": "`_banking_series`"
                     }
                   ],
                   "disaggregated": true
@@ -4417,7 +4442,8 @@
                     "decimalPlaces": {
                       "type": "max",
                       "places": 0
-                    }
+                    },
+                    "abbreviation": "none"
                   }
                 },
                 "y": {
@@ -4436,8 +4462,8 @@
                   }
                 },
                 "color": {
-                  "fieldName": "_metric_series",
-                  "displayName": "Metric",
+                  "fieldName": "_banking_series",
+                  "displayName": "Series",
                   "scale": {
                     "type": "categorical",
                     "mappings": [
@@ -4486,8 +4512,8 @@
                       "expression": "`total_amount`"
                     },
                     {
-                      "name": "_metric_series",
-                      "expression": "'Banking activity'"
+                      "name": "_banking_series",
+                      "expression": "`_banking_series`"
                     }
                   ],
                   "disaggregated": true
@@ -4513,7 +4539,8 @@
                     "decimalPlaces": {
                       "type": "max",
                       "places": 0
-                    }
+                    },
+                    "abbreviation": "none"
                   }
                 },
                 "y": {
@@ -4532,8 +4559,8 @@
                   }
                 },
                 "color": {
-                  "fieldName": "_metric_series",
-                  "displayName": "Metric",
+                  "fieldName": "_banking_series",
+                  "displayName": "Series",
                   "scale": {
                     "type": "categorical",
                     "mappings": [
@@ -4609,7 +4636,8 @@
                     "decimalPlaces": {
                       "type": "max",
                       "places": 0
-                    }
+                    },
+                    "abbreviation": "none"
                   }
                 },
                 "y": {
@@ -4694,8 +4722,8 @@
                       "expression": "`fraud_transactions`"
                     },
                     {
-                      "name": "_metric_series",
-                      "expression": "'Fraud labels'"
+                      "name": "_fraud_series",
+                      "expression": "`_fraud_series`"
                     }
                   ],
                   "disaggregated": true
@@ -4721,7 +4749,8 @@
                     "decimalPlaces": {
                       "type": "max",
                       "places": 0
-                    }
+                    },
+                    "abbreviation": "none"
                   }
                 },
                 "y": {
@@ -4740,8 +4769,8 @@
                   }
                 },
                 "color": {
-                  "fieldName": "_metric_series",
-                  "displayName": "Metric",
+                  "fieldName": "_fraud_series",
+                  "displayName": "Series",
                   "scale": {
                     "type": "categorical",
                     "mappings": [
@@ -4815,7 +4844,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 0
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -4826,7 +4856,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -4906,7 +4937,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 0
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -4917,7 +4949,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 0
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -4928,7 +4961,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -4939,7 +4973,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -4950,7 +4985,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 0
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -5017,8 +5053,8 @@
                       "expression": "`fraud_rate`"
                     },
                     {
-                      "name": "_metric_series",
-                      "expression": "'Fraud labels'"
+                      "name": "_fraud_series",
+                      "expression": "`_fraud_series`"
                     }
                   ],
                   "disaggregated": true
@@ -5055,8 +5091,8 @@
                   }
                 },
                 "color": {
-                  "fieldName": "_metric_series",
-                  "displayName": "Metric",
+                  "fieldName": "_fraud_series",
+                  "displayName": "Series",
                   "scale": {
                     "type": "categorical",
                     "mappings": [
@@ -5146,7 +5182,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 0
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -5157,7 +5194,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 0
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -5179,7 +5217,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -5190,7 +5229,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   }
                 ]
@@ -5271,7 +5311,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 0
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -5282,7 +5323,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -5293,7 +5335,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -5304,7 +5347,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -5315,7 +5359,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -5326,7 +5371,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -5337,7 +5383,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   }
                 ]
@@ -5398,7 +5445,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -5409,7 +5457,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 0
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -5420,7 +5469,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 0
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -5605,7 +5655,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 0
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -5616,7 +5667,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 0
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -5627,7 +5679,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 0
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -5638,7 +5691,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 0
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -5763,7 +5817,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 0
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -5774,7 +5829,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -5785,7 +5841,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -5796,7 +5853,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -5893,7 +5951,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 0
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -5904,7 +5963,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -5915,7 +5975,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 0
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -5926,7 +5987,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 0
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   }
                 ]
@@ -5995,7 +6057,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 0
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -6006,7 +6069,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -6017,7 +6081,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 0
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -6028,7 +6093,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 0
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   }
                 ]
@@ -6060,8 +6126,8 @@
                       "expression": "`cumulative_share`"
                     },
                     {
-                      "name": "_metric_series",
-                      "expression": "'Banking activity'"
+                      "name": "_banking_series",
+                      "expression": "`_banking_series`"
                     }
                   ],
                   "disaggregated": true
@@ -6087,7 +6153,8 @@
                     "decimalPlaces": {
                       "type": "max",
                       "places": 0
-                    }
+                    },
+                    "abbreviation": "none"
                   }
                 },
                 "y": {
@@ -6105,8 +6172,8 @@
                   }
                 },
                 "color": {
-                  "fieldName": "_metric_series",
-                  "displayName": "Metric",
+                  "fieldName": "_banking_series",
+                  "displayName": "Series",
                   "scale": {
                     "type": "categorical",
                     "mappings": [
@@ -6192,7 +6259,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 0
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -6203,7 +6271,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   }
                 ]
@@ -6284,7 +6353,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 0
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -6307,7 +6377,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -6318,7 +6389,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 0
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -6329,7 +6401,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 0
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   }
                 ]
@@ -6414,7 +6487,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -6425,7 +6499,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -6436,7 +6511,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   },
                   {
@@ -6447,7 +6523,8 @@
                       "decimalPlaces": {
                         "type": "max",
                         "places": 2
-                      }
+                      },
+                      "abbreviation": "none"
                     }
                   }
                 ]

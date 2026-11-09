@@ -87,7 +87,8 @@ class DashboardPresentationTests(unittest.TestCase):
             self.assertNotIn('color', value)
             if value['fieldName'] in ('transactions','fraud_transactions'):
                 self.assertEqual(value['format']['type'], 'number-plain')
-                self.assertNotIn('abbreviation', value['format'])
+                self.assertEqual(value['format']['abbreviation'], 'none')
+                self.assertEqual(value['formatTemplate'], '{{ @ }}')
         text = json.dumps(definition)
         self.assertNotIn('250,000', text)
         self.assertNotIn('14 simulation hours', text)
@@ -102,5 +103,25 @@ class DashboardPresentationTests(unittest.TestCase):
         self.assertTrue({'origin_balance_before','origin_balance_after','destination_balance_before','destination_balance_after'} <= fields)
         ref = next(c for c in balances['spec']['encodings']['columns'] if c['fieldName']=='transaction_reference')
         self.assertIn('12 chars', ref['displayName'])
+
+class DatasetSeriesTests(unittest.TestCase):
+    def test_single_series_colors_use_materialized_dataset_columns(self):
+        definition=builder.build()
+        datasets={d['name']:d for d in definition['datasets']}
+        checked=0
+        for page in definition['pages']:
+            for item in page['layout']:
+                widget=item['widget']
+                color=widget.get('spec',{}).get('encodings',{}).get('color',{})
+                field=color.get('fieldName','')
+                if field not in ('_banking_series','_fraud_series'):continue
+                query=widget['queries'][0]['query']
+                sql=''.join(datasets[query['datasetName']]['queryLines'])
+                self.assertIn(' AS '+field,sql)
+                projection=next(f for f in query['fields'] if f['name']==field)
+                self.assertEqual(projection['expression'],'`'+field+'`')
+                self.assertTrue(color['scale']['mappings'][0]['value'])
+                checked+=1
+        self.assertGreaterEqual(checked,5)
 
 if __name__=='__main__': unittest.main()

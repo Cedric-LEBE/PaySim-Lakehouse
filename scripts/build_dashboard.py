@@ -22,7 +22,8 @@ def number_format(field, compact=False):
     if field in PERCENT or field == 'fraud_amount_share':
         return {'type': 'number-percent', 'decimalPlaces': {'type': 'max', 'places': 4}}
     result = {'type': 'number-plain' if field in COUNT_FIELDS else 'number',
-              'decimalPlaces': {'type': 'max', 'places': 0 if field in COUNT_FIELDS else 2}}
+              'decimalPlaces': {'type': 'max', 'places': 0 if field in COUNT_FIELDS else 2},
+              'abbreviation': 'none'}
     if compact:
         result['type'] = 'number'
         result['abbreviation'] = 'compact'
@@ -56,6 +57,8 @@ def polish(definition):
             if kind == 'counter':
                 field = enc['value']['fieldName']
                 enc['value']['format'] = number_format(field, compact=field not in COUNT_FIELDS and field not in PERCENT and field != 'fraud_amount_share')
+                if field in ('transactions', 'fraud_transactions'):
+                    enc['value']['formatTemplate'] = '{{ @ }}'
             elif kind == 'table':
                 for column in enc['columns']:
                     field = column['fieldName']
@@ -85,11 +88,12 @@ def polish(definition):
                 elif 'color' in enc:
                     enc['color']['scale']['mappings'] = [{'value': value, 'color': color} for value, color in TYPE_COLORS.items()]
                 else:
-                    # A constant series is a normal categorical encoding, avoiding
-                    # undocumented per-counter colors or arbitrary style fields.
+                    # The series must be a real dataset column: the client does not
+                    # materialize literal expressions in the widget projection.
                     label = 'Fraud labels' if 'fraud' in measure or page['name']=='fraud' else 'Banking activity'
-                    fields.append({'name': '_metric_series', 'expression': "'" + label + "'"})
-                    enc['color'] = {'fieldName': '_metric_series', 'displayName': 'Metric',
+                    series = '_fraud_series' if label=='Fraud labels' else '_banking_series'
+                    fields.append({'name': series, 'expression': '`' + series + '`'})
+                    enc['color'] = {'fieldName': series, 'displayName': 'Series',
                                     'scale': {'type': 'categorical', 'mappings': [
                                         {'value': label, 'color': CORAL if label=='Fraud labels' else '#3274C5'}]}}
         if page['name'] == 'overview':
@@ -142,6 +146,19 @@ def polish(definition):
                     if column['fieldName']=='transaction_key':
                         column.update(fieldName='transaction_reference',displayName='Transaction Ref. (12 chars)')
             page['layout'].append(balances)
+    # Presentation-only columns are evaluated by SQL, so the widget receives
+    # non-null category values and can apply semantic colors consistently.
+    needed = {w['widget']['queries'][0]['query']['datasetName']
+              for page in definition['pages'] if page['pageType']=='PAGE_TYPE_CANVAS'
+              for w in page['layout'] if any(f['name'] in ('_banking_series','_fraud_series')
+                  for q in w['widget'].get('queries',[]) for f in q['query'].get('fields',[]))}
+    ordering = {'03_hourly': 'simulation_step', '06_amount_distribution': 'band_order',
+                '08_type_risk': 'fraud_transactions DESC', '13_concentration': 'account_rank'}
+    for dataset in definition['datasets']:
+        if dataset['name'] in needed:
+            sql = ''.join(dataset['queryLines']).strip().rstrip(';')
+            dataset['queryLines'] = ("SELECT presentation.*, 'Banking activity' AS _banking_series, "
+                                     "'Fraud labels' AS _fraud_series\nFROM (\n" + sql + "\n) presentation\nORDER BY " + ordering[dataset['name']] + "\n").splitlines(keepends=True)
     return definition
 
 
