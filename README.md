@@ -4,7 +4,7 @@
 
 An incremental lakehouse for simulated banking transactions: Kafka ingestion, Bronze/Silver/Gold Delta tables, data quality controls, business deduplication, a star schema and Databricks analytics dashboards.
 
-**Current status:** the local pipeline has been validated on the first **250,000 PaySim transactions**. The star schema has been imported into Databricks Free Edition, and a four-page dashboard and import job are deployed using Declarative Automation Bundles (DAB). Fraud metrics describe the dataset's labels; predictive modeling, VPS deployment and AWS infrastructure remain planned work.
+**Current status:** all **6,362,620 PaySim transactions** have been processed and validated on AWS EC2, exported to S3, and imported into Databricks. Historical local reference runs are retained below. The star schema has been imported into Databricks Free Edition, and a four-page dashboard and import job are deployed using Declarative Automation Bundles (DAB). Fraud metrics describe the dataset's labels; predictive modeling, VPS deployment and AWS infrastructure remain planned work.
 
 ## Architecture
 
@@ -109,7 +109,7 @@ To extend that validated prefix without republishing rows 1–250,000:
 bash scripts/pipeline.sh --resume --max-messages 500000 --batch-rows 50000 --rate 1000 --max-offsets 5000
 ```
 
-In resume mode, `--max-messages` is the **cumulative target**, not the number of new events. The runner validates the existing published prefix once, then records CSV progress only after each range passes Bronze → Silver → Gold → star and full CSV reconciliation. Interrupted ranges can be replayed into Bronze; Silver deduplicates their stable event IDs. Keep `data/checkpoints/csv-replay.json` with the lakehouse. The existing 250,000-row reference is unchanged until you run this command. The full dataset has not been benchmarked.
+In resume mode, `--max-messages` is the **cumulative target**, not the number of new events. The runner validates the existing published prefix once, then records CSV progress only after each range passes Bronze → Silver → Gold → star and full CSV reconciliation. Interrupted ranges can be replayed into Bronze; Silver deduplicates their stable event IDs. Keep `data/checkpoints/csv-replay.json` with the lakehouse. This historical command illustrates the first extension from 250,000 rows. The full EC2 run is complete; a repeatable performance benchmark remains to be established.
 
 See [operations](docs/operations.md) and [recovery guarantees](docs/architecture.md). No cloud resources are created by these commands.
 
@@ -125,7 +125,7 @@ The [S3 import guide](docs/s3-import.md) explains the read-only IAM/Unity Catalo
 
 The [initial import guide](docs/databricks-dashboard.md) covers the four Parquet files and manifest, a managed Unity Catalog volume, the validated import notebook and managed Delta tables. This initial transfer is a manual snapshot transfer, not a live connection to local Kafka.
 
-The [analytics bundle](docs/databricks-bundle.md) deploys an English-language dashboard with **16 analyses, 30 visualizations and six shared filters**:
+The [analytics bundle](docs/databricks-bundle.md) deploys an English-language dashboard with **16 analyses, 31 visualizations and six shared filters**:
 
 | Page | Coverage |
 | --- | --- |
@@ -158,7 +158,7 @@ Replace the placeholder and profile as needed. The bundle reuses existing comput
 | Observed simulation hours | 1 | 14 |
 | Distinct accounts, both roles | 189 | 365,533 |
 
-A fresh 100-row run produces 100 Bronze events and no quarantine rows. Bronze, duplicate and quarantine counts depend on replay history. Retained historical dimensions can outnumber members referenced by current facts. These samples do not represent the full dataset, which has not yet been processed end to end.
+A fresh 100-row run produces 100 Bronze events and no quarantine rows. Bronze, duplicate and quarantine counts depend on replay history. Retained historical dimensions can outnumber members referenced by current facts. These historical samples are retained for reproducibility; the full dataset has since been processed on EC2 and imported from S3.
 
 ## Tests and CI
 
@@ -170,7 +170,7 @@ PYTHONPATH=src .venv/bin/python -m unittest discover -s tests -p 'test_*.py' -v
 
 [GitHub Actions CI](.github/workflows/ci.yml) runs the unit tests, then a synthetic Bronze → Silver → Gold → star scenario on Ubuntu, Python 3.13 and Java 17. The integration scenario covers replay, deduplication, conflict withdrawal, aggregates and dimension references without Docker, Kafka, Kaggle data or cloud secrets.
 
-The dashboard definition is checked against its generator. Local SQL tests additionally reconcile all 16 analyses on the published 250,000-row star with combined filters and an empty selection. See [test scope and commands](docs/testing.md); some reference tests intentionally require exactly the first 100 rows.
+The dashboard definition is checked against its generator. The historical local SQL reference test reconciles all 16 analyses on a 250,000-row star with combined filters and an empty selection. Full-dataset dashboard KPIs have separately been reconciled with the S3 export manifest. See [test scope and commands](docs/testing.md); some reference tests intentionally require exactly the first 100 rows.
 
 ## Repository layout
 

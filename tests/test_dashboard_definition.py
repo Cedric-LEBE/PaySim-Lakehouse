@@ -43,4 +43,64 @@ class DashboardDefinitionTests(unittest.TestCase):
                             if 'fieldName' in field: self.assertIn(field['fieldName'],fields)
         self.assertEqual(len(names),len(set(names)))
 
+
+class DashboardPresentationTests(unittest.TestCase):
+    def test_layout_has_no_overlaps_and_wide_tables_are_full_width(self):
+        definition = builder.build()
+        for page in definition['pages']:
+            boxes = [item['position'] for item in page['layout']]
+            for i, a in enumerate(boxes):
+                self.assertTrue(0 <= a['x'] and a['x'] + a['width'] <= 12)
+                for b in boxes[i+1:]:
+                    overlap = (a['x'] < b['x'] + b['width'] and b['x'] < a['x'] + a['width']
+                               and a['y'] < b['y'] + b['height'] and b['y'] < a['y'] + a['height'])
+                    self.assertFalse(overlap, page['name'])
+            for item in page['layout']:
+                spec = item['widget'].get('spec', {})
+                if spec.get('widgetType') == 'table' and len(spec['encodings']['columns']) >= 5:
+                    self.assertEqual(item['position']['width'], 12)
+
+    def test_ratio_axes_use_percent_without_rescaling_data(self):
+        charts = [item['widget'] for p in builder.build()['pages'] for item in p['layout']
+                  if item['widget'].get('spec', {}).get('widgetType') in ('bar','line')]
+        ratios = [w for w in charts if w['spec']['encodings']['y']['fieldName'] in builder.PERCENT]
+        self.assertEqual(len(ratios), 2)
+        for widget in ratios:
+            enc = widget['spec']['encodings']['y']
+            self.assertEqual(enc['format']['type'], 'number-percent')
+            field = next(f for f in widget['queries'][0]['query']['fields'] if f['name'] == enc['fieldName'])
+            self.assertEqual(field['expression'], '`' + field['name'] + '`')
+            self.assertIn('%', widget['spec']['format']['percentFormat']['format'])
+            self.assertNotIn('%', widget['spec']['format']['numberFormat']['format'])
+            if widget['spec']['encodings']['x']['fieldName']=='account_rank':
+                self.assertEqual(widget['spec']['encodings']['x']['format']['type'],'number-plain')
+
+    def test_theme_and_exact_counts_have_readable_contracts(self):
+        definition = builder.build()
+        self.assertEqual(definition['uiSettings']['locale'], 'en-US')
+        theme = definition['uiSettings']['theme']
+        self.assertNotEqual(theme['canvasBackgroundColor'], theme['widgetBackgroundColor'])
+        counters = [item['widget']['spec'] for p in definition['pages'] for item in p['layout']
+                    if item['widget'].get('spec', {}).get('widgetType') == 'counter']
+        for counter in counters:
+            value = counter['encodings']['value']
+            self.assertNotIn('color', value)
+            if value['fieldName'] in ('transactions','fraud_transactions'):
+                self.assertEqual(value['format']['type'], 'number-plain')
+                self.assertNotIn('abbreviation', value['format'])
+        text = json.dumps(definition)
+        self.assertNotIn('250,000', text)
+        self.assertNotIn('14 simulation hours', text)
+
+    def test_short_references_are_presentation_only_and_balances_remain_available(self):
+        definition = builder.build()
+        dataset = next(d for d in definition['datasets'] if d['name']=='16_transactions')
+        self.assertIn('transaction_key', ''.join(dataset['queryLines']))
+        page = next(p for p in definition['pages'] if p['name']=='accounts')
+        balances = next(i['widget'] for i in page['layout'] if i['widget']['name']=='accounts_balances')
+        fields = {f['name'] for f in balances['queries'][0]['query']['fields']}
+        self.assertTrue({'origin_balance_before','origin_balance_after','destination_balance_before','destination_balance_after'} <= fields)
+        ref = next(c for c in balances['spec']['encodings']['columns'] if c['fieldName']=='transaction_reference')
+        self.assertIn('12 chars', ref['displayName'])
+
 if __name__=='__main__': unittest.main()

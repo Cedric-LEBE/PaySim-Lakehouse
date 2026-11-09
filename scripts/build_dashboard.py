@@ -1,4 +1,5 @@
 """Generate the versioned AI/BI dashboard from reviewed SQL analyses (stdlib only)."""
+import copy
 import json
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
@@ -6,6 +7,142 @@ SQL = ROOT / 'sql/analytics'
 LABELS = {'transactions':'Transactions','transaction_type':'Type','total_amount':'Total Amount','average_amount':'Average Amount','median_amount':'Approximate Median','fraud_transactions':'Fraudulent Transactions','fraud_rate':'Fraud Rate','fraud_amount':'Fraud Amount','relative_rate':'Rate Relative to Filtered Population','simulation_step':'Simulation Hour','transaction_change':'Count Change','transaction_growth':'Relative Change','origin_account':'Origin Account','destination_account':'Destination Account','distinct_counterparties':'Distinct Counterparties','account_rank':'Rank','cumulative_share':'Cumulative Share','fraud_label':'PaySim Label','amount_band':'Amount Band','precision_flag':'Flag Precision','recall_flag':'Flag Recall','accuracy_flag':'Flag Accuracy','f1_flag':'Flag F1 Score','outcome':'Outcome','account_role':'Role','account':'Account','fraud_participations':'Fraud-related Role Count','amount':'Amount','is_fraud':'Fraud Label','is_flagged_fraud':'PaySim Flag','transaction_key':'Transaction ID','p90_amount':'90th Percentile Amount','p99_amount':'99th Percentile Amount','maximum_amount':'Maximum Amount','average_origin_change':'Average Origin Balance Change','average_destination_change':'Average Destination Balance Change','origin_zero_after':'Origin Balance Zero After Transaction','origin_balance_before':'Origin Balance Before','origin_balance_after':'Origin Balance After','destination_balance_before':'Destination Balance Before','destination_balance_after':'Destination Balance After','tp':'True Positives','fp':'False Positives','fn':'False Negatives','tn':'True Negatives'}
 PERCENT = {'fraud_rate','transaction_growth','cumulative_share','amount_share','precision_flag','recall_flag','accuracy_flag','f1_flag'}
 PARAMS = {'types': None, 'fraud_labels': None, 'hour_min': '1', 'hour_max': '744', 'amount_min': '0', 'amount_max': '999999999999999999.99'}
+
+
+# Semantic chart colors are stable across pages; they do not classify a type as fraud.
+TYPE_COLORS = {'CASH_IN': '#238B8D', 'CASH_OUT': '#3274C5', 'DEBIT': '#9770B5',
+               'PAYMENT': '#C28B24', 'TRANSFER': '#5364A5'}
+NAVY, CORAL = '#17385D', '#C65345'
+COUNT_FIELDS = {'transactions', 'fraud_transactions', 'distinct_counterparties',
+                'fraud_participations', 'simulation_step', 'account_rank',
+                'is_fraud', 'is_flagged_fraud', 'tp', 'fp', 'fn', 'tn'}
+
+
+def number_format(field, compact=False):
+    if field in PERCENT or field == 'fraud_amount_share':
+        return {'type': 'number-percent', 'decimalPlaces': {'type': 'max', 'places': 4}}
+    result = {'type': 'number-plain' if field in COUNT_FIELDS else 'number',
+              'decimalPlaces': {'type': 'max', 'places': 0 if field in COUNT_FIELDS else 2}}
+    if compact:
+        result['type'] = 'number'
+        result['abbreviation'] = 'compact'
+    return result
+
+
+def polish(definition):
+    definition['uiSettings'] = {
+        'locale': 'en-US',
+        'theme': {
+            'canvasBackgroundColor': {'light': '#EAF0F7', 'dark': '#101B2B'},
+            'widgetBackgroundColor': {'light': '#F7FAFF', 'dark': '#19283C'},
+            'widgetBorderColor': {'light': '#D6E1EF', 'dark': '#30445E'},
+            'fontColor': {'light': NAVY, 'dark': '#E7EFF9'},
+            'selectionColor': {'light': '#2563EB', 'dark': '#8CB9FF'},
+            'visualizationColors': [*TYPE_COLORS.values(), CORAL, '#78869A'],
+            'widgetHeaderAlignment': 'LEFT', 'widgetCornerRadius': 10,
+            'fontFamily': 'Arial'
+        }
+    }
+    for page in definition['pages']:
+        if page['pageType'] != 'PAGE_TYPE_CANVAS':
+            continue
+        layout = page['layout']
+        layout[0]['position']['height'] = 2
+        for item in layout[1:]:
+            widget = item['widget']
+            spec = widget['spec']
+            kind = spec['widgetType']
+            enc = spec['encodings']
+            if kind == 'counter':
+                field = enc['value']['fieldName']
+                enc['value']['format'] = number_format(field, compact=field not in COUNT_FIELDS and field not in PERCENT and field != 'fraud_amount_share')
+            elif kind == 'table':
+                for column in enc['columns']:
+                    field = column['fieldName']
+                    if field in COUNT_FIELDS or field in PERCENT or any(token in field for token in ('amount','balance','change','relative_rate')):
+                        column['format'] = number_format(field)
+                    if field == 'relative_rate':
+                        column['displayName'] = 'Rate vs Population (×)'
+            else:
+                measure = enc['y']['fieldName']
+                enc['y']['format'] = number_format(measure, compact=measure not in PERCENT)
+                enc['y']['displayName'] = LABELS.get(measure, measure)
+                # Legacy chart formatter controls tick labels on runtimes that do not
+                # yet use the per-encoding number format. Ratios stay ratios in SQL.
+                pattern = '0.[00]a'
+                if enc['x']['fieldName'] in ('simulation_step','account_rank'):
+                    enc['x']['format'] = number_format(enc['x']['fieldName'])
+                spec['format'] = {'numberFormat': {'formatType': 'numeral', 'format': pattern},
+                                  'percentFormat': {'formatType': 'numeral', 'format': '0.[0000]%'}}
+                fields = widget['queries'][0]['query']['fields']
+                if enc['x']['fieldName']=='outcome':
+                    enc['color']={'fieldName':'outcome','displayName':'Flag outcome','scale':{'type':'categorical','mappings':[
+                        {'value':'True Negative','color':'#78869A'}, {'value':'False Negative','color':CORAL},
+                        {'value':'True Positive','color':'#238B8D'}, {'value':'False Positive','color':'#C28B24'}]}}
+                elif enc['x']['fieldName']=='transaction_type' and page['name']!='fraud':
+                    enc['color']={'fieldName':'transaction_type','displayName':'Transaction Type','scale':{'type':'categorical','mappings':[
+                        {'value':value,'color':color} for value,color in TYPE_COLORS.items()]}}
+                elif 'color' in enc:
+                    enc['color']['scale']['mappings'] = [{'value': value, 'color': color} for value, color in TYPE_COLORS.items()]
+                else:
+                    # A constant series is a normal categorical encoding, avoiding
+                    # undocumented per-counter colors or arbitrary style fields.
+                    label = 'Fraud labels' if 'fraud' in measure or page['name']=='fraud' else 'Banking activity'
+                    fields.append({'name': '_metric_series', 'expression': "'" + label + "'"})
+                    enc['color'] = {'fieldName': '_metric_series', 'displayName': 'Metric',
+                                    'scale': {'type': 'categorical', 'mappings': [
+                                        {'value': label, 'color': CORAL if label=='Fraud labels' else '#3274C5'}]}}
+        if page['name'] == 'overview':
+            # Four headline metrics, followed by amount detail; exact transaction counts.
+            by_field = {item['widget']['spec']['encodings']['value']['fieldName']: item for item in layout[1:9]}
+            order = ['transactions','total_amount','fraud_transactions','fraud_rate',
+                     'average_amount','median_amount','fraud_amount','fraud_amount_share']
+            cards = [by_field[name] for name in order]
+            for i,item in enumerate(cards):
+                item['position'].update(x=(i%4)*3, y=2+(i//4)*3, width=3, height=3)
+            charts = layout[9:]
+            charts[0]['position'].update(x=0,y=8,width=6,height=6)
+            charts[1]['position'].update(x=6,y=8,width=6,height=6)
+            charts[2]['position'].update(x=0,y=14,width=12,height=5)
+            charts[3]['position'].update(x=0,y=19,width=12,height=6)
+            page['layout'] = [layout[0],*cards,*charts]
+        elif page['name'] == 'time':
+            for i,item in enumerate(layout[1:5]):
+                item['position'].update(x=(i%2)*6,y=2+(i//2)*6,width=6,height=6)
+            for i,item in enumerate(layout[5:]):
+                item['position'].update(x=0,y=14+i*6,width=12,height=6)
+        elif page['name'] == 'fraud':
+            chart, risk, comparison, bands, flag, metrics, balance = layout[1:]
+            for i,item in enumerate([chart,flag]):
+                item['position'].update(x=i*6,y=2,width=6,height=6)
+            for i,item in enumerate([risk,comparison,bands,metrics,balance]):
+                item['position'].update(x=0,y=8+i*6,width=12,height=6)
+        elif page['name'] == 'accounts':
+            for i,item in enumerate(layout[1:3]):
+                item['position'].update(x=0,y=2+i*6,width=12,height=6)
+            layout[3]['position'].update(x=0,y=14,width=5,height=6)
+            layout[4]['position'].update(x=5,y=14,width=7,height=6)
+            detail=layout[5]
+            detail['position'].update(x=0,y=20,width=12,height=8)
+            balance_columns=['transaction_key','origin_account','destination_account','origin_balance_before','origin_balance_after','destination_balance_before','destination_balance_after']
+            balances=copy.deepcopy(detail)
+            balances['widget']['name']='accounts_balances'
+            balances['widget']['spec']['frame']['title']='Transaction Balances — Up to 500 Rows'
+            balances['position'].update(y=28,height=8)
+            for item, selected in [(detail,['transaction_key','simulation_step','transaction_type','origin_account','destination_account','amount','is_fraud','is_flagged_fraud']), (balances,balance_columns)]:
+                fields=item['widget']['queries'][0]['query']['fields']
+                item['widget']['queries'][0]['query']['fields']=[f for f in fields if f['name'] in selected]
+                columns=item['widget']['spec']['encodings']['columns']
+                item['widget']['spec']['encodings']['columns']=[c for c in columns if c['fieldName'] in selected]
+                for f in item['widget']['queries'][0]['query']['fields']:
+                    if f['name']=='transaction_key':
+                        f['name']='transaction_reference'
+                        f['expression']='substring(`transaction_key`, 1, 12)'
+                for column in item['widget']['spec']['encodings']['columns']:
+                    if column['fieldName']=='transaction_key':
+                        column.update(fieldName='transaction_reference',displayName='Transaction Ref. (12 chars)')
+            page['layout'].append(balances)
+    return definition
 
 
 def parameter(name, default):
@@ -52,7 +189,7 @@ def build():
             if color:
                 spec['encodings']['color']={'fieldName':color,'displayName':LABELS.get(color,color.replace('_',' ').title()),'scale':{'type':'categorical'}}
         layout.append({'widget':{'name':f'{pages[-1]["name"]}_{len(layout)}','queries':[{'name':'main_query','query':{'datasetName':ds,'fields':fields,'disaggregated':True}}],'spec':spec},'position':{'x':x,'y':y,'width':width,'height':height}})
-    note='Synthetic PaySim data • Validated reference: first 250,000 rows, 14 simulation hours • No currency assigned • Imported snapshot, not a live feed. Filters apply before aggregation; percentiles are approximate.'
+    note='Synthetic PaySim banking transactions • Selected snapshot and filters • Simulation hours, no calendar dates or assigned currency • Imported data, not a live feed. Percentiles are approximate.'
     layout=page('overview','Overview',note)
     for i,(col,title,pct) in enumerate([('transactions','Transactions',False),('total_amount','Total Amount',False),('average_amount','Average Amount',False),('median_amount','Approximate Median Amount',False),('fraud_transactions','Fraudulent Transactions (PaySim Labels)',False),('fraud_rate','Fraud Rate',True),('fraud_amount','Fraud Amount',False),('fraud_amount_share','Fraudulent Share of Total Amount',True)]):
         widget(layout,'01_summary',title,[col],'counter',x=(i%4)*3,y=3+(i//4)*3,width=3,height=3,percent=pct)
@@ -60,7 +197,7 @@ def build():
     widget(layout,'02_by_type','Amounts by Type',['transaction_type','total_amount'],'bar',x=6,y=9,width=6)
     widget(layout,'06_amount_distribution','Amount Distribution — Transaction Counts',['amount_band','transactions'],'bar',y=15,width=6)
     widget(layout,'02_by_type','Summary by Type',['transaction_type','transactions','total_amount','average_amount','median_amount','fraud_transactions','fraud_rate'],x=6,y=15,width=6)
-    layout=page('time','Activity Over Time','Relative simulation hours, not calendar dates. The first hourly change is undefined. This sample does not support daily or weekly seasonality analysis or forecasting.')
+    layout=page('time','Activity Over Time','Activity across the selected simulation hours. Hours are relative, not calendar dates. The first hourly change is undefined; simulated patterns do not establish real-world seasonality or forecasts.')
     for i,(ds,title,cols,kind,color) in enumerate([
         ('03_hourly','Transactions by Simulation Hour',['simulation_step','transactions'],'line',None),
         ('03_hourly','Amounts by Simulation Hour',['simulation_step','total_amount'],'line',None),
@@ -79,7 +216,7 @@ def build():
         ('10_flag_metrics','Descriptive Evaluation of the PaySim Flag',['tp','fp','fn','tn','precision_flag','recall_flag','f1_flag','accuracy_flag'],'table'),
         ('15_balance_changes','Observed Balance Changes per Transaction',['transaction_type','fraud_label','transactions','average_amount','average_origin_change','average_destination_change','origin_zero_after'],'table')]):
         widget(layout,ds,title,cols,kind,x=(i%2)*6,y=3+(i//2)*6,width=12 if i==6 else 6)
-    layout=page('accounts','Accounts and Transactions','Display limits: 20 origin accounts, 20 destination accounts, 30 fraud-related account roles and 500 transaction details. One fraudulent transaction can appear in both account roles; role counts are not unique fraud counts. Summed transaction balances are not consolidated account balances.')
+    layout=page('accounts','Accounts and Transactions','Top 20 accounts per role, 30 fraud-related roles and 500 transaction details. Role counts are not unique frauds; transaction balances are not consolidated balances. Display references use 12 characters; full IDs remain in the dataset.')
     for i,(ds,title,cols,kind) in enumerate([
         ('11_origin_accounts','Top 20 Origin Accounts by Amount',['origin_account','transactions','total_amount','distinct_counterparties','fraud_transactions'],'table'),
         ('12_destination_accounts','Top 20 Destination Accounts by Amount',['destination_account','transactions','total_amount','distinct_counterparties','fraud_transactions'],'table'),
@@ -87,7 +224,7 @@ def build():
         ('14_fraud_accounts','Fraud-related Accounts by Role',['account_role','account','fraud_participations','fraud_amount'],'table')]):
         widget(layout,ds,title,cols,kind,x=(i%2)*6,y=3+(i//2)*6,width=6)
     widget(layout,'16_transactions','Filtered Transactions — Up to 500 Rows',['transaction_key','simulation_step','transaction_type','origin_account','destination_account','amount','is_fraud','is_flagged_fraud','origin_balance_before','origin_balance_after','destination_balance_before','destination_balance_after'],y=15,height=9)
-    return {'datasets':datasets,'pages':pages}
+    return polish({'datasets':datasets,'pages':pages})
 
 
 if __name__=='__main__':

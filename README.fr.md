@@ -4,7 +4,7 @@
 
 Pipeline de données financières simulées, de l'ingestion Kafka à l'analyse SQL sur Delta Lake. Le projet met en œuvre une architecture Bronze/Silver/Gold, des contrôles de qualité, une déduplication métier et un schéma en étoile.
 
-**État : pipeline incrémental local validé sur 250 000 lignes ; étoile importée et dashboard déployé dans Databricks Free Edition via DAB.** Les indicateurs utilisent les labels PaySim pour l'analyse descriptive. L'entraînement d'un modèle, le VPS et l'infrastructure AWS restent dans la [feuille de route](docs/roadmap.md).
+**État : les 6 362 620 transactions ont été traitées et validées sur EC2, exportées vers S3 et importées dans Databricks Free Edition via le job DAB.** Les indicateurs utilisent les labels PaySim pour l'analyse descriptive. L'entraînement d'un modèle, le VPS et l'infrastructure AWS restent dans la [feuille de route](docs/roadmap.md).
 
 ## Architecture
 
@@ -147,7 +147,7 @@ Les tests unitaires ne nécessitent ni Kafka ni Spark :
 PYTHONPATH=src .venv/bin/python -m unittest discover -s tests -v
 ```
 
-Le workflow [GitHub Actions CI](.github/workflows/ci.yml) exécute les trente-cinq tests unitaires, puis un scénario d'intégration synthétique Bronze → Silver → Gold → étoile, sur Ubuntu avec Python 3.13 et Java 17. Il se déclenche sur push, pull request et lancement manuel. Le scénario vérifie les rejeux et le retrait d'une transaction en conflit sans Kafka, Docker, CSV Kaggle ni secrets cloud.
+Le workflow [GitHub Actions CI](.github/workflows/ci.yml) exécute les trente-neuf tests unitaires, puis un scénario d'intégration synthétique Bronze → Silver → Gold → étoile, sur Ubuntu avec Python 3.13 et Java 17. Il se déclenche sur push, pull request et lancement manuel. Le scénario vérifie les rejeux et le retrait d'une transaction en conflit sans Kafka, Docker, CSV Kaggle ni secrets cloud.
 
 La [documentation des tests](docs/testing.md) donne les commandes d'intégration, leurs prérequis et les données utilisées. Certains tests attendent précisément l'échantillon de 100 transactions ci-dessus.
 

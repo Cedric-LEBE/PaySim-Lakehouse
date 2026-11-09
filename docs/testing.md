@@ -10,7 +10,7 @@ Exécuter les commandes depuis la racine du dépôt, après installation des dé
 PYTHONPATH=src .venv/bin/python -m unittest discover -s tests -v
 ```
 
-Les trente-cinq tests couvrent également l’ordre des étapes du lanceur, le blocage après échec, le nettoyage Kafka et le refus d’un CSV incorrect avant publication. Ils couvrent la précision et l'identité des événements producer, la validation consumer et l'absence de confirmation d'offset lorsque le message, sa clé ou sa sortie sont en échec. Kafka, Spark et le CSV Kaggle ne sont pas requis.
+Les trente-neuf tests couvrent également l’ordre des étapes du lanceur, le blocage après échec, le nettoyage Kafka et le refus d’un CSV incorrect avant publication. Ils couvrent la précision et l'identité des événements producer, la validation consumer et l'absence de confirmation d'offset lorsque le message, sa clé ou sa sortie sont en échec. Kafka, Spark et le CSV Kaggle ne sont pas requis.
 
 Les contrôles de déploiement ajoutent sept tests : configuration absente, mauvaise branche/événement, commit exact, attente de CI, jobs ignorés et refus de revenir à un ancien succès après un échec plus récent. Ils ne nécessitent aucun accès Databricks.
 
@@ -158,7 +158,7 @@ L'interruption pendant une écriture Bronze, la perte de rétention Kafka et un 
 
 Le workflow [CI](../.github/workflows/ci.yml) se déclenche à chaque push, à chaque ouverture ou mise à jour d'une pull request, et manuellement via `workflow_dispatch`. Les deux jobs utilisent Ubuntu 24.04 et Python 3.13, avec lecture seule du dépôt et actions figées par SHA.
 
-1. **Unit tests (Python 3.13)** installe `requirements.txt`, vérifie les dépendances et exécute les trente-cinq tests unitaires sans Spark ni Kafka. Ce job est limité à cinq minutes.
+1. **Unit tests (Python 3.13)** installe `requirements.txt`, vérifie les dépendances et exécute les trente-neuf tests unitaires sans Spark ni Kafka. Ce job est limité à cinq minutes.
 2. **Incremental pipeline (Spark / Delta)** attend la réussite du premier job, configure Java 17 Temurin, crée `.venv` et installe `requirements-streaming.txt`. Il est limité à quinze minutes et exécute :
 
 ```bash
@@ -174,3 +174,8 @@ Aucun service Docker, dataset Kaggle ou secret cloud n'est utilisé. Spark et le
 La concurrence annule une exécution ancienne de la même référence lorsqu'une nouvelle arrive. Aucun déploiement n'est effectué. Après push, ouvrir **Actions → CI** et vérifier que les deux jobs sont verts. Un succès de ce scénario valide le parcours Delta synthétique ; il ne valide ni la connectivité Kafka, ni les interruptions couvertes par les autres tests locaux, ni le rejeu du dataset complet.
 
 Références : [construire et tester Python avec GitHub Actions](https://docs.github.com/en/actions/tutorials/build-and-test-code/python), [configuration de Java avec setup-java](https://github.com/actions/setup-java).
+
+
+## Présentation du dashboard complet
+
+Les quatre contrôles supplémentaires du générateur vérifient les chevauchements et largeurs de grille, les formats pourcentage sans mise à l'échelle des données ni conversion des rangs en pourcentages, les compteurs entiers et références obsolètes, et le maintien des soldes après séparation du tableau de détail. La suite compte désormais 39 tests unitaires. Les 17 SQL des datasets sont inchangés. Les KPI du nouvel instantané Databricks ont été rapprochés avec le manifeste S3 (6 362 620 faits et 8 213 fraudes) ; le contrôle local historique `dashboard_analytics_check.py` reste volontairement dédié au préfixe de 250 000 lignes. Le rendu visuel final doit être vérifié dans le client Databricks.

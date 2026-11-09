@@ -3534,7 +3534,7 @@
             "name": "overview_intro",
             "multilineTextboxSpec": {
               "lines": [
-                "# Overview\n\nSynthetic PaySim data • Validated reference: first 250,000 rows, 14 simulation hours • No currency assigned • Imported snapshot, not a live feed. Filters apply before aggregation; percentiles are approximate."
+                "# Overview\n\nSynthetic PaySim banking transactions • Selected snapshot and filters • Simulation hours, no calendar dates or assigned currency • Imported data, not a live feed. Percentiles are approximate."
               ]
             }
           },
@@ -3542,7 +3542,7 @@
             "x": 0,
             "y": 0,
             "width": 12,
-            "height": 3
+            "height": 2
           }
         },
         {
@@ -3575,10 +3575,10 @@
                   "fieldName": "transactions",
                   "displayName": "Transactions",
                   "format": {
-                    "type": "number",
+                    "type": "number-plain",
                     "decimalPlaces": {
                       "type": "max",
-                      "places": 2
+                      "places": 0
                     }
                   }
                 }
@@ -3587,7 +3587,7 @@
           },
           "position": {
             "x": 0,
-            "y": 3,
+            "y": 2,
             "width": 3,
             "height": 3
           }
@@ -3626,7 +3626,8 @@
                     "decimalPlaces": {
                       "type": "max",
                       "places": 2
-                    }
+                    },
+                    "abbreviation": "compact"
                   }
                 }
               }
@@ -3634,101 +3635,7 @@
           },
           "position": {
             "x": 3,
-            "y": 3,
-            "width": 3,
-            "height": 3
-          }
-        },
-        {
-          "widget": {
-            "name": "overview_3",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "01_summary",
-                  "fields": [
-                    {
-                      "name": "average_amount",
-                      "expression": "`average_amount`"
-                    }
-                  ],
-                  "disaggregated": true
-                }
-              }
-            ],
-            "spec": {
-              "version": 2,
-              "widgetType": "counter",
-              "frame": {
-                "showTitle": true,
-                "title": "Average Amount"
-              },
-              "encodings": {
-                "value": {
-                  "fieldName": "average_amount",
-                  "displayName": "Average Amount",
-                  "format": {
-                    "type": "number",
-                    "decimalPlaces": {
-                      "type": "max",
-                      "places": 2
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "position": {
-            "x": 6,
-            "y": 3,
-            "width": 3,
-            "height": 3
-          }
-        },
-        {
-          "widget": {
-            "name": "overview_4",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "01_summary",
-                  "fields": [
-                    {
-                      "name": "median_amount",
-                      "expression": "`median_amount`"
-                    }
-                  ],
-                  "disaggregated": true
-                }
-              }
-            ],
-            "spec": {
-              "version": 2,
-              "widgetType": "counter",
-              "frame": {
-                "showTitle": true,
-                "title": "Approximate Median Amount"
-              },
-              "encodings": {
-                "value": {
-                  "fieldName": "median_amount",
-                  "displayName": "Approximate Median Amount",
-                  "format": {
-                    "type": "number",
-                    "decimalPlaces": {
-                      "type": "max",
-                      "places": 2
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "position": {
-            "x": 9,
-            "y": 3,
+            "y": 2,
             "width": 3,
             "height": 3
           }
@@ -3763,10 +3670,10 @@
                   "fieldName": "fraud_transactions",
                   "displayName": "Fraudulent Transactions (PaySim Labels)",
                   "format": {
-                    "type": "number",
+                    "type": "number-plain",
                     "decimalPlaces": {
                       "type": "max",
-                      "places": 2
+                      "places": 0
                     }
                   }
                 }
@@ -3774,8 +3681,8 @@
             }
           },
           "position": {
-            "x": 0,
-            "y": 6,
+            "x": 6,
+            "y": 2,
             "width": 3,
             "height": 3
           }
@@ -3821,8 +3728,104 @@
             }
           },
           "position": {
+            "x": 9,
+            "y": 2,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "overview_3",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "01_summary",
+                  "fields": [
+                    {
+                      "name": "average_amount",
+                      "expression": "`average_amount`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "frame": {
+                "showTitle": true,
+                "title": "Average Amount"
+              },
+              "encodings": {
+                "value": {
+                  "fieldName": "average_amount",
+                  "displayName": "Average Amount",
+                  "format": {
+                    "type": "number",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    },
+                    "abbreviation": "compact"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "overview_4",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "01_summary",
+                  "fields": [
+                    {
+                      "name": "median_amount",
+                      "expression": "`median_amount`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "frame": {
+                "showTitle": true,
+                "title": "Approximate Median Amount"
+              },
+              "encodings": {
+                "value": {
+                  "fieldName": "median_amount",
+                  "displayName": "Approximate Median Amount",
+                  "format": {
+                    "type": "number",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    },
+                    "abbreviation": "compact"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
             "x": 3,
-            "y": 6,
+            "y": 5,
             "width": 3,
             "height": 3
           }
@@ -3861,7 +3864,8 @@
                     "decimalPlaces": {
                       "type": "max",
                       "places": 2
-                    }
+                    },
+                    "abbreviation": "compact"
                   }
                 }
               }
@@ -3869,7 +3873,7 @@
           },
           "position": {
             "x": 6,
-            "y": 6,
+            "y": 5,
             "width": 3,
             "height": 3
           }
@@ -3916,7 +3920,7 @@
           },
           "position": {
             "x": 9,
-            "y": 6,
+            "y": 5,
             "width": 3,
             "height": 3
           }
@@ -3963,14 +3967,61 @@
                   "displayName": "Transactions",
                   "scale": {
                     "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    },
+                    "abbreviation": "compact"
                   }
+                },
+                "color": {
+                  "fieldName": "transaction_type",
+                  "displayName": "Transaction Type",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "CASH_IN",
+                        "color": "#238B8D"
+                      },
+                      {
+                        "value": "CASH_OUT",
+                        "color": "#3274C5"
+                      },
+                      {
+                        "value": "DEBIT",
+                        "color": "#9770B5"
+                      },
+                      {
+                        "value": "PAYMENT",
+                        "color": "#C28B24"
+                      },
+                      {
+                        "value": "TRANSFER",
+                        "color": "#5364A5"
+                      }
+                    ]
+                  }
+                }
+              },
+              "format": {
+                "numberFormat": {
+                  "formatType": "numeral",
+                  "format": "0.[00]a"
+                },
+                "percentFormat": {
+                  "formatType": "numeral",
+                  "format": "0.[0000]%"
                 }
               }
             }
           },
           "position": {
             "x": 0,
-            "y": 9,
+            "y": 8,
             "width": 6,
             "height": 6
           }
@@ -4017,14 +4068,61 @@
                   "displayName": "Total Amount",
                   "scale": {
                     "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    },
+                    "abbreviation": "compact"
                   }
+                },
+                "color": {
+                  "fieldName": "transaction_type",
+                  "displayName": "Transaction Type",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "CASH_IN",
+                        "color": "#238B8D"
+                      },
+                      {
+                        "value": "CASH_OUT",
+                        "color": "#3274C5"
+                      },
+                      {
+                        "value": "DEBIT",
+                        "color": "#9770B5"
+                      },
+                      {
+                        "value": "PAYMENT",
+                        "color": "#C28B24"
+                      },
+                      {
+                        "value": "TRANSFER",
+                        "color": "#5364A5"
+                      }
+                    ]
+                  }
+                }
+              },
+              "format": {
+                "numberFormat": {
+                  "formatType": "numeral",
+                  "format": "0.[00]a"
+                },
+                "percentFormat": {
+                  "formatType": "numeral",
+                  "format": "0.[0000]%"
                 }
               }
             }
           },
           "position": {
             "x": 6,
-            "y": 9,
+            "y": 8,
             "width": 6,
             "height": 6
           }
@@ -4045,6 +4143,10 @@
                     {
                       "name": "transactions",
                       "expression": "`transactions`"
+                    },
+                    {
+                      "name": "_metric_series",
+                      "expression": "'Banking activity'"
                     }
                   ],
                   "disaggregated": true
@@ -4071,16 +4173,47 @@
                   "displayName": "Transactions",
                   "scale": {
                     "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    },
+                    "abbreviation": "compact"
                   }
+                },
+                "color": {
+                  "fieldName": "_metric_series",
+                  "displayName": "Metric",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Banking activity",
+                        "color": "#3274C5"
+                      }
+                    ]
+                  }
+                }
+              },
+              "format": {
+                "numberFormat": {
+                  "formatType": "numeral",
+                  "format": "0.[00]a"
+                },
+                "percentFormat": {
+                  "formatType": "numeral",
+                  "format": "0.[0000]%"
                 }
               }
             }
           },
           "position": {
             "x": 0,
-            "y": 15,
-            "width": 6,
-            "height": 6
+            "y": 14,
+            "width": 12,
+            "height": 5
           }
         },
         {
@@ -4140,23 +4273,58 @@
                   },
                   {
                     "fieldName": "transactions",
-                    "displayName": "Transactions"
+                    "displayName": "Transactions",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 0
+                      }
+                    }
                   },
                   {
                     "fieldName": "total_amount",
-                    "displayName": "Total Amount"
+                    "displayName": "Total Amount",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
                   },
                   {
                     "fieldName": "average_amount",
-                    "displayName": "Average Amount"
+                    "displayName": "Average Amount",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
                   },
                   {
                     "fieldName": "median_amount",
-                    "displayName": "Approximate Median"
+                    "displayName": "Approximate Median",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
                   },
                   {
                     "fieldName": "fraud_transactions",
-                    "displayName": "Fraudulent Transactions"
+                    "displayName": "Fraudulent Transactions",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 0
+                      }
+                    }
                   },
                   {
                     "fieldName": "fraud_rate",
@@ -4174,9 +4342,9 @@
             }
           },
           "position": {
-            "x": 6,
-            "y": 15,
-            "width": 6,
+            "x": 0,
+            "y": 19,
+            "width": 12,
             "height": 6
           }
         }
@@ -4193,7 +4361,7 @@
             "name": "time_intro",
             "multilineTextboxSpec": {
               "lines": [
-                "# Activity Over Time\n\nRelative simulation hours, not calendar dates. The first hourly change is undefined. This sample does not support daily or weekly seasonality analysis or forecasting."
+                "# Activity Over Time\n\nActivity across the selected simulation hours. Hours are relative, not calendar dates. The first hourly change is undefined; simulated patterns do not establish real-world seasonality or forecasts."
               ]
             }
           },
@@ -4201,7 +4369,7 @@
             "x": 0,
             "y": 0,
             "width": 12,
-            "height": 3
+            "height": 2
           }
         },
         {
@@ -4220,6 +4388,10 @@
                     {
                       "name": "transactions",
                       "expression": "`transactions`"
+                    },
+                    {
+                      "name": "_metric_series",
+                      "expression": "'Banking activity'"
                     }
                   ],
                   "disaggregated": true
@@ -4239,6 +4411,13 @@
                   "displayName": "Simulation Hour",
                   "scale": {
                     "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
                   }
                 },
                 "y": {
@@ -4246,14 +4425,45 @@
                   "displayName": "Transactions",
                   "scale": {
                     "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    },
+                    "abbreviation": "compact"
                   }
+                },
+                "color": {
+                  "fieldName": "_metric_series",
+                  "displayName": "Metric",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Banking activity",
+                        "color": "#3274C5"
+                      }
+                    ]
+                  }
+                }
+              },
+              "format": {
+                "numberFormat": {
+                  "formatType": "numeral",
+                  "format": "0.[00]a"
+                },
+                "percentFormat": {
+                  "formatType": "numeral",
+                  "format": "0.[0000]%"
                 }
               }
             }
           },
           "position": {
             "x": 0,
-            "y": 3,
+            "y": 2,
             "width": 6,
             "height": 6
           }
@@ -4274,6 +4484,10 @@
                     {
                       "name": "total_amount",
                       "expression": "`total_amount`"
+                    },
+                    {
+                      "name": "_metric_series",
+                      "expression": "'Banking activity'"
                     }
                   ],
                   "disaggregated": true
@@ -4293,6 +4507,13 @@
                   "displayName": "Simulation Hour",
                   "scale": {
                     "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
                   }
                 },
                 "y": {
@@ -4300,14 +4521,45 @@
                   "displayName": "Total Amount",
                   "scale": {
                     "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    },
+                    "abbreviation": "compact"
                   }
+                },
+                "color": {
+                  "fieldName": "_metric_series",
+                  "displayName": "Metric",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Banking activity",
+                        "color": "#3274C5"
+                      }
+                    ]
+                  }
+                }
+              },
+              "format": {
+                "numberFormat": {
+                  "formatType": "numeral",
+                  "format": "0.[00]a"
+                },
+                "percentFormat": {
+                  "formatType": "numeral",
+                  "format": "0.[0000]%"
                 }
               }
             }
           },
           "position": {
             "x": 6,
-            "y": 3,
+            "y": 2,
             "width": 6,
             "height": 6
           }
@@ -4351,6 +4603,13 @@
                   "displayName": "Simulation Hour",
                   "scale": {
                     "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
                   }
                 },
                 "y": {
@@ -4358,21 +4617,61 @@
                   "displayName": "Transactions",
                   "scale": {
                     "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    },
+                    "abbreviation": "compact"
                   }
                 },
                 "color": {
                   "fieldName": "transaction_type",
                   "displayName": "Type",
                   "scale": {
-                    "type": "categorical"
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "CASH_IN",
+                        "color": "#238B8D"
+                      },
+                      {
+                        "value": "CASH_OUT",
+                        "color": "#3274C5"
+                      },
+                      {
+                        "value": "DEBIT",
+                        "color": "#9770B5"
+                      },
+                      {
+                        "value": "PAYMENT",
+                        "color": "#C28B24"
+                      },
+                      {
+                        "value": "TRANSFER",
+                        "color": "#5364A5"
+                      }
+                    ]
                   }
+                }
+              },
+              "format": {
+                "numberFormat": {
+                  "formatType": "numeral",
+                  "format": "0.[00]a"
+                },
+                "percentFormat": {
+                  "formatType": "numeral",
+                  "format": "0.[0000]%"
                 }
               }
             }
           },
           "position": {
             "x": 0,
-            "y": 9,
+            "y": 8,
             "width": 6,
             "height": 6
           }
@@ -4393,6 +4692,10 @@
                     {
                       "name": "fraud_transactions",
                       "expression": "`fraud_transactions`"
+                    },
+                    {
+                      "name": "_metric_series",
+                      "expression": "'Fraud labels'"
                     }
                   ],
                   "disaggregated": true
@@ -4412,6 +4715,13 @@
                   "displayName": "Simulation Hour",
                   "scale": {
                     "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
                   }
                 },
                 "y": {
@@ -4419,14 +4729,45 @@
                   "displayName": "Fraudulent Transactions",
                   "scale": {
                     "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    },
+                    "abbreviation": "compact"
                   }
+                },
+                "color": {
+                  "fieldName": "_metric_series",
+                  "displayName": "Metric",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Fraud labels",
+                        "color": "#C65345"
+                      }
+                    ]
+                  }
+                }
+              },
+              "format": {
+                "numberFormat": {
+                  "formatType": "numeral",
+                  "format": "0.[00]a"
+                },
+                "percentFormat": {
+                  "formatType": "numeral",
+                  "format": "0.[0000]%"
                 }
               }
             }
           },
           "position": {
             "x": 6,
-            "y": 9,
+            "y": 8,
             "width": 6,
             "height": 6
           }
@@ -4468,11 +4809,25 @@
                 "columns": [
                   {
                     "fieldName": "simulation_step",
-                    "displayName": "Simulation Hour"
+                    "displayName": "Simulation Hour",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 0
+                      }
+                    }
                   },
                   {
                     "fieldName": "transaction_change",
-                    "displayName": "Count Change"
+                    "displayName": "Count Change",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
                   },
                   {
                     "fieldName": "transaction_growth",
@@ -4491,8 +4846,8 @@
           },
           "position": {
             "x": 0,
-            "y": 15,
-            "width": 6,
+            "y": 14,
+            "width": 12,
             "height": 6
           }
         },
@@ -4545,23 +4900,58 @@
                 "columns": [
                   {
                     "fieldName": "simulation_step",
-                    "displayName": "Simulation Hour"
+                    "displayName": "Simulation Hour",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 0
+                      }
+                    }
                   },
                   {
                     "fieldName": "transactions",
-                    "displayName": "Transactions"
+                    "displayName": "Transactions",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 0
+                      }
+                    }
                   },
                   {
                     "fieldName": "total_amount",
-                    "displayName": "Total Amount"
+                    "displayName": "Total Amount",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
                   },
                   {
                     "fieldName": "average_amount",
-                    "displayName": "Average Amount"
+                    "displayName": "Average Amount",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
                   },
                   {
                     "fieldName": "fraud_transactions",
-                    "displayName": "Fraudulent Transactions"
+                    "displayName": "Fraudulent Transactions",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 0
+                      }
+                    }
                   },
                   {
                     "fieldName": "fraud_rate",
@@ -4579,9 +4969,9 @@
             }
           },
           "position": {
-            "x": 6,
-            "y": 15,
-            "width": 6,
+            "x": 0,
+            "y": 20,
+            "width": 12,
             "height": 6
           }
         }
@@ -4606,7 +4996,7 @@
             "x": 0,
             "y": 0,
             "width": 12,
-            "height": 3
+            "height": 2
           }
         },
         {
@@ -4625,6 +5015,10 @@
                     {
                       "name": "fraud_rate",
                       "expression": "`fraud_rate`"
+                    },
+                    {
+                      "name": "_metric_series",
+                      "expression": "'Fraud labels'"
                     }
                   ],
                   "disaggregated": true
@@ -4648,17 +5042,47 @@
                 },
                 "y": {
                   "fieldName": "fraud_rate",
-                  "displayName": "Fraud Rate (ratio 0–1)",
+                  "displayName": "Fraud Rate",
                   "scale": {
                     "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 4
+                    }
                   }
+                },
+                "color": {
+                  "fieldName": "_metric_series",
+                  "displayName": "Metric",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Fraud labels",
+                        "color": "#C65345"
+                      }
+                    ]
+                  }
+                }
+              },
+              "format": {
+                "numberFormat": {
+                  "formatType": "numeral",
+                  "format": "0.[00]a"
+                },
+                "percentFormat": {
+                  "formatType": "numeral",
+                  "format": "0.[0000]%"
                 }
               }
             }
           },
           "position": {
             "x": 0,
-            "y": 3,
+            "y": 2,
             "width": 6,
             "height": 6
           }
@@ -4716,11 +5140,25 @@
                   },
                   {
                     "fieldName": "transactions",
-                    "displayName": "Transactions"
+                    "displayName": "Transactions",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 0
+                      }
+                    }
                   },
                   {
                     "fieldName": "fraud_transactions",
-                    "displayName": "Fraudulent Transactions"
+                    "displayName": "Fraudulent Transactions",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 0
+                      }
+                    }
                   },
                   {
                     "fieldName": "fraud_rate",
@@ -4735,20 +5173,34 @@
                   },
                   {
                     "fieldName": "relative_rate",
-                    "displayName": "Rate Relative to Filtered Population"
+                    "displayName": "Rate vs Population (×)",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
                   },
                   {
                     "fieldName": "fraud_amount",
-                    "displayName": "Fraud Amount"
+                    "displayName": "Fraud Amount",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
                   }
                 ]
               }
             }
           },
           "position": {
-            "x": 6,
-            "y": 3,
-            "width": 6,
+            "x": 0,
+            "y": 8,
+            "width": 12,
             "height": 6
           }
         },
@@ -4813,31 +5265,80 @@
                   },
                   {
                     "fieldName": "transactions",
-                    "displayName": "Transactions"
+                    "displayName": "Transactions",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 0
+                      }
+                    }
                   },
                   {
                     "fieldName": "total_amount",
-                    "displayName": "Total Amount"
+                    "displayName": "Total Amount",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
                   },
                   {
                     "fieldName": "average_amount",
-                    "displayName": "Average Amount"
+                    "displayName": "Average Amount",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
                   },
                   {
                     "fieldName": "median_amount",
-                    "displayName": "Approximate Median"
+                    "displayName": "Approximate Median",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
                   },
                   {
                     "fieldName": "p90_amount",
-                    "displayName": "90th Percentile Amount"
+                    "displayName": "90th Percentile Amount",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
                   },
                   {
                     "fieldName": "p99_amount",
-                    "displayName": "99th Percentile Amount"
+                    "displayName": "99th Percentile Amount",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
                   },
                   {
                     "fieldName": "maximum_amount",
-                    "displayName": "Maximum Amount"
+                    "displayName": "Maximum Amount",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
                   }
                 ]
               }
@@ -4845,8 +5346,8 @@
           },
           "position": {
             "x": 0,
-            "y": 9,
-            "width": 6,
+            "y": 14,
+            "width": 12,
             "height": 6
           }
         },
@@ -4891,15 +5392,36 @@
                 "columns": [
                   {
                     "fieldName": "amount_band",
-                    "displayName": "Amount Band"
+                    "displayName": "Amount Band",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
                   },
                   {
                     "fieldName": "transactions",
-                    "displayName": "Transactions"
+                    "displayName": "Transactions",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 0
+                      }
+                    }
                   },
                   {
                     "fieldName": "fraud_transactions",
-                    "displayName": "Fraudulent Transactions"
+                    "displayName": "Fraudulent Transactions",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 0
+                      }
+                    }
                   },
                   {
                     "fieldName": "fraud_rate",
@@ -4917,9 +5439,9 @@
             }
           },
           "position": {
-            "x": 6,
-            "y": 9,
-            "width": 6,
+            "x": 0,
+            "y": 20,
+            "width": 12,
             "height": 6
           }
         },
@@ -4965,14 +5487,57 @@
                   "displayName": "Transactions",
                   "scale": {
                     "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    },
+                    "abbreviation": "compact"
                   }
+                },
+                "color": {
+                  "fieldName": "outcome",
+                  "displayName": "Flag outcome",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "True Negative",
+                        "color": "#78869A"
+                      },
+                      {
+                        "value": "False Negative",
+                        "color": "#C65345"
+                      },
+                      {
+                        "value": "True Positive",
+                        "color": "#238B8D"
+                      },
+                      {
+                        "value": "False Positive",
+                        "color": "#C28B24"
+                      }
+                    ]
+                  }
+                }
+              },
+              "format": {
+                "numberFormat": {
+                  "formatType": "numeral",
+                  "format": "0.[00]a"
+                },
+                "percentFormat": {
+                  "formatType": "numeral",
+                  "format": "0.[0000]%"
                 }
               }
             }
           },
           "position": {
-            "x": 0,
-            "y": 15,
+            "x": 6,
+            "y": 2,
             "width": 6,
             "height": 6
           }
@@ -5034,19 +5599,47 @@
                 "columns": [
                   {
                     "fieldName": "tp",
-                    "displayName": "True Positives"
+                    "displayName": "True Positives",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 0
+                      }
+                    }
                   },
                   {
                     "fieldName": "fp",
-                    "displayName": "False Positives"
+                    "displayName": "False Positives",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 0
+                      }
+                    }
                   },
                   {
                     "fieldName": "fn",
-                    "displayName": "False Negatives"
+                    "displayName": "False Negatives",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 0
+                      }
+                    }
                   },
                   {
                     "fieldName": "tn",
-                    "displayName": "True Negatives"
+                    "displayName": "True Negatives",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 0
+                      }
+                    }
                   },
                   {
                     "fieldName": "precision_flag",
@@ -5097,9 +5690,9 @@
             }
           },
           "position": {
-            "x": 6,
-            "y": 15,
-            "width": 6,
+            "x": 0,
+            "y": 26,
+            "width": 12,
             "height": 6
           }
         },
@@ -5164,19 +5757,47 @@
                   },
                   {
                     "fieldName": "transactions",
-                    "displayName": "Transactions"
+                    "displayName": "Transactions",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 0
+                      }
+                    }
                   },
                   {
                     "fieldName": "average_amount",
-                    "displayName": "Average Amount"
+                    "displayName": "Average Amount",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
                   },
                   {
                     "fieldName": "average_origin_change",
-                    "displayName": "Average Origin Balance Change"
+                    "displayName": "Average Origin Balance Change",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
                   },
                   {
                     "fieldName": "average_destination_change",
-                    "displayName": "Average Destination Balance Change"
+                    "displayName": "Average Destination Balance Change",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
                   },
                   {
                     "fieldName": "origin_zero_after",
@@ -5188,7 +5809,7 @@
           },
           "position": {
             "x": 0,
-            "y": 21,
+            "y": 32,
             "width": 12,
             "height": 6
           }
@@ -5206,7 +5827,7 @@
             "name": "accounts_intro",
             "multilineTextboxSpec": {
               "lines": [
-                "# Accounts and Transactions\n\nDisplay limits: 20 origin accounts, 20 destination accounts, 30 fraud-related account roles and 500 transaction details. One fraudulent transaction can appear in both account roles; role counts are not unique fraud counts. Summed transaction balances are not consolidated account balances."
+                "# Accounts and Transactions\n\nTop 20 accounts per role, 30 fraud-related roles and 500 transaction details. Role counts are not unique frauds; transaction balances are not consolidated balances. Display references use 12 characters; full IDs remain in the dataset."
               ]
             }
           },
@@ -5214,7 +5835,7 @@
             "x": 0,
             "y": 0,
             "width": 12,
-            "height": 3
+            "height": 2
           }
         },
         {
@@ -5266,19 +5887,47 @@
                   },
                   {
                     "fieldName": "transactions",
-                    "displayName": "Transactions"
+                    "displayName": "Transactions",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 0
+                      }
+                    }
                   },
                   {
                     "fieldName": "total_amount",
-                    "displayName": "Total Amount"
+                    "displayName": "Total Amount",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
                   },
                   {
                     "fieldName": "distinct_counterparties",
-                    "displayName": "Distinct Counterparties"
+                    "displayName": "Distinct Counterparties",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 0
+                      }
+                    }
                   },
                   {
                     "fieldName": "fraud_transactions",
-                    "displayName": "Fraudulent Transactions"
+                    "displayName": "Fraudulent Transactions",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 0
+                      }
+                    }
                   }
                 ]
               }
@@ -5286,8 +5935,8 @@
           },
           "position": {
             "x": 0,
-            "y": 3,
-            "width": 6,
+            "y": 2,
+            "width": 12,
             "height": 6
           }
         },
@@ -5340,28 +5989,56 @@
                   },
                   {
                     "fieldName": "transactions",
-                    "displayName": "Transactions"
+                    "displayName": "Transactions",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 0
+                      }
+                    }
                   },
                   {
                     "fieldName": "total_amount",
-                    "displayName": "Total Amount"
+                    "displayName": "Total Amount",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
                   },
                   {
                     "fieldName": "distinct_counterparties",
-                    "displayName": "Distinct Counterparties"
+                    "displayName": "Distinct Counterparties",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 0
+                      }
+                    }
                   },
                   {
                     "fieldName": "fraud_transactions",
-                    "displayName": "Fraudulent Transactions"
+                    "displayName": "Fraudulent Transactions",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 0
+                      }
+                    }
                   }
                 ]
               }
             }
           },
           "position": {
-            "x": 6,
-            "y": 3,
-            "width": 6,
+            "x": 0,
+            "y": 8,
+            "width": 12,
             "height": 6
           }
         },
@@ -5381,6 +6058,10 @@
                     {
                       "name": "cumulative_share",
                       "expression": "`cumulative_share`"
+                    },
+                    {
+                      "name": "_metric_series",
+                      "expression": "'Banking activity'"
                     }
                   ],
                   "disaggregated": true
@@ -5400,22 +6081,59 @@
                   "displayName": "Rank",
                   "scale": {
                     "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
                   }
                 },
                 "y": {
                   "fieldName": "cumulative_share",
-                  "displayName": "Cumulative Share (ratio 0–1)",
+                  "displayName": "Cumulative Share",
                   "scale": {
                     "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 4
+                    }
                   }
+                },
+                "color": {
+                  "fieldName": "_metric_series",
+                  "displayName": "Metric",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Banking activity",
+                        "color": "#3274C5"
+                      }
+                    ]
+                  }
+                }
+              },
+              "format": {
+                "numberFormat": {
+                  "formatType": "numeral",
+                  "format": "0.[00]a"
+                },
+                "percentFormat": {
+                  "formatType": "numeral",
+                  "format": "0.[0000]%"
                 }
               }
             }
           },
           "position": {
             "x": 0,
-            "y": 9,
-            "width": 6,
+            "y": 14,
+            "width": 5,
             "height": 6
           }
         },
@@ -5468,20 +6186,34 @@
                   },
                   {
                     "fieldName": "fraud_participations",
-                    "displayName": "Fraud-related Role Count"
+                    "displayName": "Fraud-related Role Count",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 0
+                      }
+                    }
                   },
                   {
                     "fieldName": "fraud_amount",
-                    "displayName": "Fraud Amount"
+                    "displayName": "Fraud Amount",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
                   }
                 ]
               }
             }
           },
           "position": {
-            "x": 6,
-            "y": 9,
-            "width": 6,
+            "x": 5,
+            "y": 14,
+            "width": 7,
             "height": 6
           }
         },
@@ -5495,8 +6227,8 @@
                   "datasetName": "16_transactions",
                   "fields": [
                     {
-                      "name": "transaction_key",
-                      "expression": "`transaction_key`"
+                      "name": "transaction_reference",
+                      "expression": "substring(`transaction_key`, 1, 12)"
                     },
                     {
                       "name": "simulation_step",
@@ -5525,6 +6257,112 @@
                     {
                       "name": "is_flagged_fraud",
                       "expression": "`is_flagged_fraud`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "frame": {
+                "showTitle": true,
+                "title": "Filtered Transactions — Up to 500 Rows"
+              },
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "transaction_reference",
+                    "displayName": "Transaction Ref. (12 chars)"
+                  },
+                  {
+                    "fieldName": "simulation_step",
+                    "displayName": "Simulation Hour",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 0
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "transaction_type",
+                    "displayName": "Type"
+                  },
+                  {
+                    "fieldName": "origin_account",
+                    "displayName": "Origin Account"
+                  },
+                  {
+                    "fieldName": "destination_account",
+                    "displayName": "Destination Account"
+                  },
+                  {
+                    "fieldName": "amount",
+                    "displayName": "Amount",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "is_fraud",
+                    "displayName": "Fraud Label",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 0
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "is_flagged_fraud",
+                    "displayName": "PaySim Flag",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 0
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 20,
+            "width": 12,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "accounts_balances",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "16_transactions",
+                  "fields": [
+                    {
+                      "name": "transaction_reference",
+                      "expression": "substring(`transaction_key`, 1, 12)"
+                    },
+                    {
+                      "name": "origin_account",
+                      "expression": "`origin_account`"
+                    },
+                    {
+                      "name": "destination_account",
+                      "expression": "`destination_account`"
                     },
                     {
                       "name": "origin_balance_before",
@@ -5552,21 +6390,13 @@
               "widgetType": "table",
               "frame": {
                 "showTitle": true,
-                "title": "Filtered Transactions — Up to 500 Rows"
+                "title": "Transaction Balances — Up to 500 Rows"
               },
               "encodings": {
                 "columns": [
                   {
-                    "fieldName": "transaction_key",
-                    "displayName": "Transaction ID"
-                  },
-                  {
-                    "fieldName": "simulation_step",
-                    "displayName": "Simulation Hour"
-                  },
-                  {
-                    "fieldName": "transaction_type",
-                    "displayName": "Type"
+                    "fieldName": "transaction_reference",
+                    "displayName": "Transaction Ref. (12 chars)"
                   },
                   {
                     "fieldName": "origin_account",
@@ -5577,32 +6407,48 @@
                     "displayName": "Destination Account"
                   },
                   {
-                    "fieldName": "amount",
-                    "displayName": "Amount"
-                  },
-                  {
-                    "fieldName": "is_fraud",
-                    "displayName": "Fraud Label"
-                  },
-                  {
-                    "fieldName": "is_flagged_fraud",
-                    "displayName": "PaySim Flag"
-                  },
-                  {
                     "fieldName": "origin_balance_before",
-                    "displayName": "Origin Balance Before"
+                    "displayName": "Origin Balance Before",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
                   },
                   {
                     "fieldName": "origin_balance_after",
-                    "displayName": "Origin Balance After"
+                    "displayName": "Origin Balance After",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
                   },
                   {
                     "fieldName": "destination_balance_before",
-                    "displayName": "Destination Balance Before"
+                    "displayName": "Destination Balance Before",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
                   },
                   {
                     "fieldName": "destination_balance_after",
-                    "displayName": "Destination Balance After"
+                    "displayName": "Destination Balance After",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
                   }
                 ]
               }
@@ -5610,12 +6456,49 @@
           },
           "position": {
             "x": 0,
-            "y": 15,
+            "y": 28,
             "width": 12,
-            "height": 9
+            "height": 8
           }
         }
       ]
     }
-  ]
+  ],
+  "uiSettings": {
+    "locale": "en-US",
+    "theme": {
+      "canvasBackgroundColor": {
+        "light": "#EAF0F7",
+        "dark": "#101B2B"
+      },
+      "widgetBackgroundColor": {
+        "light": "#F7FAFF",
+        "dark": "#19283C"
+      },
+      "widgetBorderColor": {
+        "light": "#D6E1EF",
+        "dark": "#30445E"
+      },
+      "fontColor": {
+        "light": "#17385D",
+        "dark": "#E7EFF9"
+      },
+      "selectionColor": {
+        "light": "#2563EB",
+        "dark": "#8CB9FF"
+      },
+      "visualizationColors": [
+        "#238B8D",
+        "#3274C5",
+        "#9770B5",
+        "#C28B24",
+        "#5364A5",
+        "#C65345",
+        "#78869A"
+      ],
+      "widgetHeaderAlignment": "LEFT",
+      "widgetCornerRadius": 10,
+      "fontFamily": "Arial"
+    }
+  }
 }

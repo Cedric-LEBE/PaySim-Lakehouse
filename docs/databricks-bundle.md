@@ -29,7 +29,7 @@ Les filtres communs portent sur les types, les labels de fraude, les bornes d'he
 
 Les ratios sont stockés entre 0 et 1 : les compteurs et tables utilisent un format pourcentage. Les axes de ratio non formatés sont étiquetés « ratio 0–1 ». Une division sans dénominateur donne NULL, pas un taux inventé. Le flag fourni par PaySim n'est pas un modèle entraîné ; une forte exactitude peut masquer un rappel nul. Les participations par rôle ne sont pas des fraudes uniques : une même transaction peut compter aux deux extrémités. Ne pas additionner les soldes de transactions comme des soldes de comptes.
 
-L'échantillon de référence couvre 250 000 lignes et les heures 1 à 14 : aucune saisonnalité quotidienne/hebdomadaire ou prédiction temporelle n'est affichée. Aucune devise ni date réelle n'est attribuée. Une page de qualité n'est pas simulée : elle nécessitera l'import des rejets, conflits et journaux du pipeline.
+Le premier échantillon de référence couvrait 250 000 lignes et les heures 1 à 14. Le nouvel instantané complet couvre 6 362 620 lignes et les heures 1 à 743 ; les heures restent simulées et aucune prédiction temporelle n'est affichée. Aucune devise ni date réelle n'est attribuée. Une page de qualité n'est pas simulée : elle nécessitera l'import des rejets, conflits et journaux du pipeline.
 
 ## Validation et déploiement
 
@@ -62,8 +62,22 @@ Le bundle a passé la validation stricte et a été déployé dans la cible `dev
 BANKING_SPARK_APP=tests/integration/dashboard_analytics_check.py bash scripts/bronze.sh
 ```
 
-Le contrôle local lit l'étoile publiée de 250 000 faits. Il exécute les seize analyses avec paramètres liés, réconcilie les montants et volumes, vérifie les filtres combinés et le cas vide. Les trente-cinq tests unitaires incluent la synchronisation du JSON généré, les références des widgets et les liaisons des paramètres. La validation stricte DAB et l'acceptation de la ressource par l'API complètent ces contrôles ; l'affichage et l'interaction finale des filtres doivent être vérifiés dans l'éditeur Databricks.
+Le contrôle local lit l'étoile publiée de 250 000 faits. Il exécute les seize analyses avec paramètres liés, réconcilie les montants et volumes, vérifie les filtres combinés et le cas vide. Les trente-neuf tests unitaires incluent la synchronisation du JSON généré, les références des widgets et les liaisons des paramètres. La validation stricte DAB et l'acceptation de la ressource par l'API complètent ces contrôles ; l'affichage et l'interaction finale des filtres doivent être vérifiés dans l'éditeur Databricks.
 
 Modifier les SQL ou le générateur, régénérer le JSON puis déployer à nouveau. Une modification manuelle du dashboard géré par DAB peut être remplacée au déploiement suivant ; reporter les changements souhaités dans le dépôt. Ne pas lier ce bundle au dashboard manuel sans décision explicite.
 
 Références : [ressources DAB](https://docs.databricks.com/aws/en/dev-tools/bundles/resources), [exemple de dashboard paramétré](https://docs.databricks.com/aws/en/dev-tools/bundles/examples), [commandes bundle](https://docs.databricks.com/aws/en/dev-tools/cli/bundle-commands).
+
+## Refonte du dashboard sur le dataset complet
+
+Le nouvel instantané `workspace.paysim_20261109t205841z_8ed6f88b` contient **6 362 620 transactions**, dont **8 213 fraudes**, sur les heures simulées 1 à 743. Les KPI ont été rapprochés du manifeste S3 : montant total `1144392944759.77`, montant frauduleux `12056415427.84`. Le taux de fraude est environ 0,129082 %, affiché à 0,1291 % selon la précision choisie.
+
+La refonte conserve les 17 datasets (16 analyses et choix de filtres), leurs SQL et leurs paramètres. Elle applique un thème natif en modes clair et sombre : fond bleu-gris, cartes bleu très clair, texte bleu marine, couleurs stables par type et corail pour les séries de fraude. Le fond des cartes provient du thème global : aucune propriété non documentée de couleur individuelle de compteur n'est injectée.
+
+La locale du dashboard est fixée à `en-US`. Les compteurs de transactions et fraudes affichent des entiers complets ; les montants de synthèse sont compacts, sans symbole monétaire. Les ratios gardent leurs valeurs 0–1 et reçoivent un format pourcentage ; les rangs et heures restent numériques. Les textes ne figent plus l'ancien échantillon de 250 000 lignes / 14 heures, et ne présentent pas les heures simulées comme des dates calendaires ou des preuves de saisonnalité réelle.
+
+Les introductions passent de trois à deux unités de grille. Les quatre KPI principaux sont Transactions, Total Amount, Fraudulent Transactions et Fraud Rate. Les grandes tables utilisent toute la largeur disponible. Les soldes des 500 transactions sont dans une table séparée ; la référence affichée est un préfixe de 12 caractères, explicitement étiqueté. Elle sert à la lecture et n'est **pas une clé unique** ; l'identifiant complet reste dans le dataset SQL et la vue source. Les tables restent défilables sur les écrans étroits.
+
+Les tests de présentation couvrent les chevauchements, les largeurs, les liaisons de champs, le formatage des axes sans multiplication des ratios, les entiers exacts, la suppression des anciennes références et la disponibilité des soldes. Ils complètent les contrôles SQL et le rapprochement des KPI avec le manifeste complet. L'API accepte la définition du brouillon ; l'apparence finale, notamment le rendu des formats selon le client, doit encore être inspectée visuellement après déploiement.
+
+Pour déployer sans revenir aux anciens paramètres par défaut, conserver explicitement le schéma, l'URL S3 et le volume de l'instantané complet. Le déploiement du dashboard ne nécessite ni de relancer l'import ni de démarrer EC2. La publication doit conserver les réglages d'identifiants et les droits de partage existants.
