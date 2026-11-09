@@ -62,7 +62,7 @@ Le bundle a passé la validation stricte et a été déployé dans la cible `dev
 BANKING_SPARK_APP=tests/integration/dashboard_analytics_check.py bash scripts/bronze.sh
 ```
 
-Le contrôle local lit l'étoile publiée de 250 000 faits. Il exécute les seize analyses avec paramètres liés, réconcilie les montants et volumes, vérifie les filtres combinés et le cas vide. Les quarante tests unitaires incluent la synchronisation du JSON généré, les références des widgets et les liaisons des paramètres. La validation stricte DAB et l'acceptation de la ressource par l'API complètent ces contrôles ; l'affichage et l'interaction finale des filtres doivent être vérifiés dans l'éditeur Databricks.
+Le contrôle local lit l'étoile publiée de 250 000 faits. Il exécute les seize analyses avec paramètres liés, réconcilie les montants et volumes, vérifie les filtres combinés et le cas vide. Les quarante et un tests unitaires incluent la synchronisation du JSON généré, les références des widgets et les liaisons des paramètres. La validation stricte DAB et l'acceptation de la ressource par l'API complètent ces contrôles ; l'affichage et l'interaction finale des filtres doivent être vérifiés dans l'éditeur Databricks.
 
 Modifier les SQL ou le générateur, régénérer le JSON puis déployer à nouveau. Une modification manuelle du dashboard géré par DAB peut être remplacée au déploiement suivant ; reporter les changements souhaités dans le dépôt. Ne pas lier ce bundle au dashboard manuel sans décision explicite.
 
@@ -85,4 +85,8 @@ Pour déployer sans revenir aux anciens paramètres par défaut, conserver expli
 
 ### Correctifs après contrôle visuel
 
-Les captures ont révélé des légendes vides pour les séries constantes, ainsi que des compteurs abrégés malgré un format sans abréviation implicite. Les datasets 03, 06, 08 et 13 produisent désormais `_banking_series` et `_fraud_series` dans SQL ; les widgets sélectionnent leurs valeurs réelles, ce qui permet le mapping bleu/corail. Les compteurs de transactions et de fraudes fixent `abbreviation: none` et utilisent la valeur brute du template natif `{{ @ }}`. Les montants restent volontairement compacts. Les axes de taux et la disposition déjà validés visuellement sont conservés.
+Les captures ont révélé des légendes vides pour les séries constantes, ainsi que des compteurs abrégés malgré un format sans abréviation implicite. Les datasets 03, 06, 08 et 13 produisent désormais `_banking_series` et `_fraud_series` dans SQL ; les widgets sélectionnent leurs valeurs réelles, ce qui permet le mapping bleu/corail. Les compteurs de transactions et de fraudes fixent `abbreviation: none` et utilisent un champ de présentation `format_number(..., 0)` dans le template natif, afin de conserver les séparateurs anglais. Les montants restent volontairement compacts. Les axes de taux et la disposition déjà validés visuellement sont conservés.
+
+### Finitions de lisibilité
+
+Les tranches de montants suivent un ordre catégoriel explicite, du zéro à un million et plus. Les formats numériques désactivent le masquage des séparateurs de milliers ; les deux compteurs principaux utilisent des champs de présentation avec virgules, sans modifier leurs valeurs numériques sources. Les petits tableaux de synthèse ont une hauteur réduite. Trois compteurs complètent la matrice du flag PaySim : faux négatifs, vrais positifs et rappel ; ils utilisent le même dataset filtré et ne représentent pas un modèle prédictif.

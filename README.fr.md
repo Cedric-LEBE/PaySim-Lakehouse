@@ -147,7 +147,7 @@ Les tests unitaires ne nécessitent ni Kafka ni Spark :
 PYTHONPATH=src .venv/bin/python -m unittest discover -s tests -v
 ```
 
-Le workflow [GitHub Actions CI](.github/workflows/ci.yml) exécute les quarante tests unitaires, puis un scénario d'intégration synthétique Bronze → Silver → Gold → étoile, sur Ubuntu avec Python 3.13 et Java 17. Il se déclenche sur push, pull request et lancement manuel. Le scénario vérifie les rejeux et le retrait d'une transaction en conflit sans Kafka, Docker, CSV Kaggle ni secrets cloud.
+Le workflow [GitHub Actions CI](.github/workflows/ci.yml) exécute les quarante et un tests unitaires, puis un scénario d'intégration synthétique Bronze → Silver → Gold → étoile, sur Ubuntu avec Python 3.13 et Java 17. Il se déclenche sur push, pull request et lancement manuel. Le scénario vérifie les rejeux et le retrait d'une transaction en conflit sans Kafka, Docker, CSV Kaggle ni secrets cloud.
 
 La [documentation des tests](docs/testing.md) donne les commandes d'intégration, leurs prérequis et les données utilisées. Certains tests attendent précisément l'échantillon de 100 transactions ci-dessus.
 

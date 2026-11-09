@@ -88,7 +88,7 @@ class DashboardPresentationTests(unittest.TestCase):
             if value['fieldName'] in ('transactions','fraud_transactions'):
                 self.assertEqual(value['format']['type'], 'number-plain')
                 self.assertEqual(value['format']['abbreviation'], 'none')
-                self.assertEqual(value['formatTemplate'], '{{ @ }}')
+                self.assertEqual(value['formatTemplate'], '{{ ' + value['fieldName'] + '_display }}')
         text = json.dumps(definition)
         self.assertNotIn('250,000', text)
         self.assertNotIn('14 simulation hours', text)
@@ -123,5 +123,18 @@ class DatasetSeriesTests(unittest.TestCase):
                 self.assertTrue(color['scale']['mappings'][0]['value'])
                 checked+=1
         self.assertGreaterEqual(checked,5)
+
+class DashboardFinishingTests(unittest.TestCase):
+    def test_band_order_and_flag_detail_remain_visible(self):
+        definition = builder.build()
+        pages = {p['name']: p for p in definition['pages']}
+        distribution = next(w['widget'] for w in pages['overview']['layout'] if w['widget'].get('spec', {}).get('encodings', {}).get('x', {}).get('fieldName') == 'amount_band')
+        order = distribution['spec']['encodings']['x']['scale']['sort']['orderedValues']
+        self.assertEqual(order, ['0', 'Over 0 to <1,000', '1,000 to <10,000', '10,000 to <100,000', '100,000 to <1,000,000', '1,000,000+'])
+        cards = [w['widget'] for w in pages['fraud']['layout'] if w['widget'].get('spec', {}).get('widgetType') == 'counter']
+        self.assertEqual({w['spec']['encodings']['value']['fieldName'] for w in cards}, {'fn', 'tp', 'recall_flag'})
+        self.assertTrue(all(w['queries'][0]['query']['datasetName'] == '10_flag_metrics' for w in cards))
+        summary = next(d for d in definition['datasets'] if d['name'] == '01_summary')
+        self.assertIn('format_number(transactions, 0) AS transactions_display', ''.join(summary['queryLines']))
 
 if __name__=='__main__': unittest.main()

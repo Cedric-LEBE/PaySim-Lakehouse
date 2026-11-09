@@ -23,7 +23,7 @@ def number_format(field, compact=False):
         return {'type': 'number-percent', 'decimalPlaces': {'type': 'max', 'places': 4}}
     result = {'type': 'number-plain' if field in COUNT_FIELDS else 'number',
               'decimalPlaces': {'type': 'max', 'places': 0 if field in COUNT_FIELDS else 2},
-              'abbreviation': 'none'}
+              'abbreviation': 'none', 'hideGroupSeparator': False}
     if compact:
         result['type'] = 'number'
         result['abbreviation'] = 'compact'
@@ -58,7 +58,9 @@ def polish(definition):
                 field = enc['value']['fieldName']
                 enc['value']['format'] = number_format(field, compact=field not in COUNT_FIELDS and field not in PERCENT and field != 'fraud_amount_share')
                 if field in ('transactions', 'fraud_transactions'):
-                    enc['value']['formatTemplate'] = '{{ @ }}'
+                    display = field + '_display'
+                    widget['queries'][0]['query']['fields'].append({'name': display, 'expression': '`' + display + '`'})
+                    enc['value']['formatTemplate'] = '{{ ' + display + ' }}'
             elif kind == 'table':
                 for column in enc['columns']:
                     field = column['fieldName']
@@ -68,6 +70,8 @@ def polish(definition):
                         column['displayName'] = 'Rate vs Population (×)'
             else:
                 measure = enc['y']['fieldName']
+                if enc['x']['fieldName'] == 'amount_band':
+                    enc['x']['scale']['sort'] = {'by': 'custom-order', 'orderedValues': ['0', 'Over 0 to <1,000', '1,000 to <10,000', '10,000 to <100,000', '100,000 to <1,000,000', '1,000,000+']}
                 enc['y']['format'] = number_format(measure, compact=measure not in PERCENT)
                 enc['y']['displayName'] = LABELS.get(measure, measure)
                 # Legacy chart formatter controls tick labels on runtimes that do not
@@ -108,7 +112,7 @@ def polish(definition):
             charts[0]['position'].update(x=0,y=8,width=6,height=6)
             charts[1]['position'].update(x=6,y=8,width=6,height=6)
             charts[2]['position'].update(x=0,y=14,width=12,height=5)
-            charts[3]['position'].update(x=0,y=19,width=12,height=6)
+            charts[3]['position'].update(x=0,y=19,width=12,height=3)
             page['layout'] = [layout[0],*cards,*charts]
         elif page['name'] == 'time':
             for i,item in enumerate(layout[1:5]):
@@ -119,8 +123,17 @@ def polish(definition):
             chart, risk, comparison, bands, flag, metrics, balance = layout[1:]
             for i,item in enumerate([chart,flag]):
                 item['position'].update(x=i*6,y=2,width=6,height=6)
-            for i,item in enumerate([risk,comparison,bands,metrics,balance]):
-                item['position'].update(x=0,y=8+i*6,width=12,height=6)
+            y = 11
+            for item, height in [(risk,3),(comparison,3),(bands,3),(metrics,2),(balance,4)]:
+                item['position'].update(x=0,y=y,width=12,height=height)
+                y += height
+            # Detail counters keep the rare flag outcomes visible beside the full matrix.
+            for i,(field,title) in enumerate([('fn','Frauds Missed by PaySim Flag'),('tp','Frauds Caught by PaySim Flag'),('recall_flag','PaySim Flag Recall')]):
+                card = {
+                    'widget': {'name':'fraud_flag_'+field, 'queries':[{'name':'main_query','query':{'datasetName':'10_flag_metrics','fields':[{'name':field,'expression':'`'+field+'`'}],'disaggregated':True}}],
+                    'spec':{'version':2,'widgetType':'counter','frame':{'showTitle':True,'title':title},'encodings':{'value':{'fieldName':field,'displayName':title,'format':number_format(field)}}}},
+                    'position':{'x':i*4,'y':8,'width':4,'height':3}}
+                page['layout'].append(card)
         elif page['name'] == 'accounts':
             for i,item in enumerate(layout[1:3]):
                 item['position'].update(x=0,y=2+i*6,width=12,height=6)
@@ -155,6 +168,9 @@ def polish(definition):
     ordering = {'03_hourly': 'simulation_step', '06_amount_distribution': 'band_order',
                 '08_type_risk': 'fraud_transactions DESC', '13_concentration': 'account_rank'}
     for dataset in definition['datasets']:
+        if dataset['name'] == '01_summary':
+            sql = ''.join(dataset['queryLines']).strip().rstrip(';')
+            dataset['queryLines'] = ("SELECT summary.*, format_number(transactions, 0) AS transactions_display, format_number(fraud_transactions, 0) AS fraud_transactions_display FROM (\n" + sql + "\n) summary\n").splitlines(keepends=True)
         if dataset['name'] in needed:
             sql = ''.join(dataset['queryLines']).strip().rstrip(';')
             dataset['queryLines'] = ("SELECT presentation.*, 'Banking activity' AS _banking_series, "

@@ -4,6 +4,7 @@
       "name": "01_summary",
       "displayName": "Summary",
       "queryLines": [
+        "SELECT summary.*, format_number(transactions, 0) AS transactions_display, format_number(fraud_transactions, 0) AS fraud_transactions_display FROM (\n",
         "WITH filtered AS (\n",
         "  SELECT * FROM transactions_dashboard\n",
         "  WHERE (size(:types) = 0 OR array_contains(:types, transaction_type))\n",
@@ -22,7 +23,8 @@
         " COUNT(DISTINCT origin_account) AS origin_accounts,\n",
         " COUNT(DISTINCT destination_account) AS destination_accounts,\n",
         " MIN(simulation_step) AS first_hour, MAX(simulation_step) AS last_hour\n",
-        "FROM filtered\n"
+        "FROM filtered\n",
+        ") summary\n"
       ],
       "parameters": [
         {
@@ -3573,6 +3575,10 @@
                     {
                       "name": "transactions",
                       "expression": "`transactions`"
+                    },
+                    {
+                      "name": "transactions_display",
+                      "expression": "`transactions_display`"
                     }
                   ],
                   "disaggregated": true
@@ -3596,9 +3602,10 @@
                       "type": "max",
                       "places": 0
                     },
-                    "abbreviation": "none"
+                    "abbreviation": "none",
+                    "hideGroupSeparator": false
                   },
-                  "formatTemplate": "{{ @ }}"
+                  "formatTemplate": "{{ transactions_display }}"
                 }
               }
             }
@@ -3645,7 +3652,8 @@
                       "type": "max",
                       "places": 2
                     },
-                    "abbreviation": "compact"
+                    "abbreviation": "compact",
+                    "hideGroupSeparator": false
                   }
                 }
               }
@@ -3670,6 +3678,10 @@
                     {
                       "name": "fraud_transactions",
                       "expression": "`fraud_transactions`"
+                    },
+                    {
+                      "name": "fraud_transactions_display",
+                      "expression": "`fraud_transactions_display`"
                     }
                   ],
                   "disaggregated": true
@@ -3693,9 +3705,10 @@
                       "type": "max",
                       "places": 0
                     },
-                    "abbreviation": "none"
+                    "abbreviation": "none",
+                    "hideGroupSeparator": false
                   },
-                  "formatTemplate": "{{ @ }}"
+                  "formatTemplate": "{{ fraud_transactions_display }}"
                 }
               }
             }
@@ -3789,7 +3802,8 @@
                       "type": "max",
                       "places": 2
                     },
-                    "abbreviation": "compact"
+                    "abbreviation": "compact",
+                    "hideGroupSeparator": false
                   }
                 }
               }
@@ -3837,7 +3851,8 @@
                       "type": "max",
                       "places": 2
                     },
-                    "abbreviation": "compact"
+                    "abbreviation": "compact",
+                    "hideGroupSeparator": false
                   }
                 }
               }
@@ -3885,7 +3900,8 @@
                       "type": "max",
                       "places": 2
                     },
-                    "abbreviation": "compact"
+                    "abbreviation": "compact",
+                    "hideGroupSeparator": false
                   }
                 }
               }
@@ -3994,7 +4010,8 @@
                       "type": "max",
                       "places": 0
                     },
-                    "abbreviation": "compact"
+                    "abbreviation": "compact",
+                    "hideGroupSeparator": false
                   }
                 },
                 "color": {
@@ -4095,7 +4112,8 @@
                       "type": "max",
                       "places": 2
                     },
-                    "abbreviation": "compact"
+                    "abbreviation": "compact",
+                    "hideGroupSeparator": false
                   }
                 },
                 "color": {
@@ -4185,7 +4203,18 @@
                   "fieldName": "amount_band",
                   "displayName": "Amount Band",
                   "scale": {
-                    "type": "categorical"
+                    "type": "categorical",
+                    "sort": {
+                      "by": "custom-order",
+                      "orderedValues": [
+                        "0",
+                        "Over 0 to <1,000",
+                        "1,000 to <10,000",
+                        "10,000 to <100,000",
+                        "100,000 to <1,000,000",
+                        "1,000,000+"
+                      ]
+                    }
                   }
                 },
                 "y": {
@@ -4200,7 +4229,8 @@
                       "type": "max",
                       "places": 0
                     },
-                    "abbreviation": "compact"
+                    "abbreviation": "compact",
+                    "hideGroupSeparator": false
                   }
                 },
                 "color": {
@@ -4300,7 +4330,8 @@
                         "type": "max",
                         "places": 0
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -4312,7 +4343,8 @@
                         "type": "max",
                         "places": 2
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -4324,7 +4356,8 @@
                         "type": "max",
                         "places": 2
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -4336,7 +4369,8 @@
                         "type": "max",
                         "places": 2
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -4348,7 +4382,8 @@
                         "type": "max",
                         "places": 0
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -4370,7 +4405,7 @@
             "x": 0,
             "y": 19,
             "width": 12,
-            "height": 6
+            "height": 3
           }
         }
       ]
@@ -4443,7 +4478,8 @@
                       "type": "max",
                       "places": 0
                     },
-                    "abbreviation": "none"
+                    "abbreviation": "none",
+                    "hideGroupSeparator": false
                   }
                 },
                 "y": {
@@ -4458,7 +4494,8 @@
                       "type": "max",
                       "places": 0
                     },
-                    "abbreviation": "compact"
+                    "abbreviation": "compact",
+                    "hideGroupSeparator": false
                   }
                 },
                 "color": {
@@ -4540,7 +4577,8 @@
                       "type": "max",
                       "places": 0
                     },
-                    "abbreviation": "none"
+                    "abbreviation": "none",
+                    "hideGroupSeparator": false
                   }
                 },
                 "y": {
@@ -4555,7 +4593,8 @@
                       "type": "max",
                       "places": 2
                     },
-                    "abbreviation": "compact"
+                    "abbreviation": "compact",
+                    "hideGroupSeparator": false
                   }
                 },
                 "color": {
@@ -4637,7 +4676,8 @@
                       "type": "max",
                       "places": 0
                     },
-                    "abbreviation": "none"
+                    "abbreviation": "none",
+                    "hideGroupSeparator": false
                   }
                 },
                 "y": {
@@ -4652,7 +4692,8 @@
                       "type": "max",
                       "places": 0
                     },
-                    "abbreviation": "compact"
+                    "abbreviation": "compact",
+                    "hideGroupSeparator": false
                   }
                 },
                 "color": {
@@ -4750,7 +4791,8 @@
                       "type": "max",
                       "places": 0
                     },
-                    "abbreviation": "none"
+                    "abbreviation": "none",
+                    "hideGroupSeparator": false
                   }
                 },
                 "y": {
@@ -4765,7 +4807,8 @@
                       "type": "max",
                       "places": 0
                     },
-                    "abbreviation": "compact"
+                    "abbreviation": "compact",
+                    "hideGroupSeparator": false
                   }
                 },
                 "color": {
@@ -4845,7 +4888,8 @@
                         "type": "max",
                         "places": 0
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -4857,7 +4901,8 @@
                         "type": "max",
                         "places": 2
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -4938,7 +4983,8 @@
                         "type": "max",
                         "places": 0
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -4950,7 +4996,8 @@
                         "type": "max",
                         "places": 0
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -4962,7 +5009,8 @@
                         "type": "max",
                         "places": 2
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -4974,7 +5022,8 @@
                         "type": "max",
                         "places": 2
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -4986,7 +5035,8 @@
                         "type": "max",
                         "places": 0
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -5183,7 +5233,8 @@
                         "type": "max",
                         "places": 0
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -5195,7 +5246,8 @@
                         "type": "max",
                         "places": 0
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -5218,7 +5270,8 @@
                         "type": "max",
                         "places": 2
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -5230,7 +5283,8 @@
                         "type": "max",
                         "places": 2
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   }
                 ]
@@ -5239,9 +5293,9 @@
           },
           "position": {
             "x": 0,
-            "y": 8,
+            "y": 11,
             "width": 12,
-            "height": 6
+            "height": 3
           }
         },
         {
@@ -5312,7 +5366,8 @@
                         "type": "max",
                         "places": 0
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -5324,7 +5379,8 @@
                         "type": "max",
                         "places": 2
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -5336,7 +5392,8 @@
                         "type": "max",
                         "places": 2
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -5348,7 +5405,8 @@
                         "type": "max",
                         "places": 2
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -5360,7 +5418,8 @@
                         "type": "max",
                         "places": 2
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -5372,7 +5431,8 @@
                         "type": "max",
                         "places": 2
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -5384,7 +5444,8 @@
                         "type": "max",
                         "places": 2
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   }
                 ]
@@ -5395,7 +5456,7 @@
             "x": 0,
             "y": 14,
             "width": 12,
-            "height": 6
+            "height": 3
           }
         },
         {
@@ -5446,7 +5507,8 @@
                         "type": "max",
                         "places": 2
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -5458,7 +5520,8 @@
                         "type": "max",
                         "places": 0
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -5470,7 +5533,8 @@
                         "type": "max",
                         "places": 0
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -5490,9 +5554,9 @@
           },
           "position": {
             "x": 0,
-            "y": 20,
+            "y": 17,
             "width": 12,
-            "height": 6
+            "height": 3
           }
         },
         {
@@ -5544,7 +5608,8 @@
                       "type": "max",
                       "places": 0
                     },
-                    "abbreviation": "compact"
+                    "abbreviation": "compact",
+                    "hideGroupSeparator": false
                   }
                 },
                 "color": {
@@ -5656,7 +5721,8 @@
                         "type": "max",
                         "places": 0
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -5668,7 +5734,8 @@
                         "type": "max",
                         "places": 0
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -5680,7 +5747,8 @@
                         "type": "max",
                         "places": 0
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -5692,7 +5760,8 @@
                         "type": "max",
                         "places": 0
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -5745,9 +5814,9 @@
           },
           "position": {
             "x": 0,
-            "y": 26,
+            "y": 20,
             "width": 12,
-            "height": 6
+            "height": 2
           }
         },
         {
@@ -5818,7 +5887,8 @@
                         "type": "max",
                         "places": 0
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -5830,7 +5900,8 @@
                         "type": "max",
                         "places": 2
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -5842,7 +5913,8 @@
                         "type": "max",
                         "places": 2
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -5854,7 +5926,8 @@
                         "type": "max",
                         "places": 2
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -5867,9 +5940,154 @@
           },
           "position": {
             "x": 0,
-            "y": 32,
+            "y": 22,
             "width": 12,
-            "height": 6
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "fraud_flag_fn",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "10_flag_metrics",
+                  "fields": [
+                    {
+                      "name": "fn",
+                      "expression": "`fn`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "frame": {
+                "showTitle": true,
+                "title": "Frauds Missed by PaySim Flag"
+              },
+              "encodings": {
+                "value": {
+                  "fieldName": "fn",
+                  "displayName": "Frauds Missed by PaySim Flag",
+                  "format": {
+                    "type": "number-plain",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    },
+                    "abbreviation": "none",
+                    "hideGroupSeparator": false
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 8,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "fraud_flag_tp",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "10_flag_metrics",
+                  "fields": [
+                    {
+                      "name": "tp",
+                      "expression": "`tp`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "frame": {
+                "showTitle": true,
+                "title": "Frauds Caught by PaySim Flag"
+              },
+              "encodings": {
+                "value": {
+                  "fieldName": "tp",
+                  "displayName": "Frauds Caught by PaySim Flag",
+                  "format": {
+                    "type": "number-plain",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    },
+                    "abbreviation": "none",
+                    "hideGroupSeparator": false
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 8,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "fraud_flag_recall_flag",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "10_flag_metrics",
+                  "fields": [
+                    {
+                      "name": "recall_flag",
+                      "expression": "`recall_flag`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "frame": {
+                "showTitle": true,
+                "title": "PaySim Flag Recall"
+              },
+              "encodings": {
+                "value": {
+                  "fieldName": "recall_flag",
+                  "displayName": "PaySim Flag Recall",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 4
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 8,
+            "width": 4,
+            "height": 3
           }
         }
       ]
@@ -5952,7 +6170,8 @@
                         "type": "max",
                         "places": 0
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -5964,7 +6183,8 @@
                         "type": "max",
                         "places": 2
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -5976,7 +6196,8 @@
                         "type": "max",
                         "places": 0
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -5988,7 +6209,8 @@
                         "type": "max",
                         "places": 0
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   }
                 ]
@@ -6058,7 +6280,8 @@
                         "type": "max",
                         "places": 0
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -6070,7 +6293,8 @@
                         "type": "max",
                         "places": 2
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -6082,7 +6306,8 @@
                         "type": "max",
                         "places": 0
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -6094,7 +6319,8 @@
                         "type": "max",
                         "places": 0
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   }
                 ]
@@ -6154,7 +6380,8 @@
                       "type": "max",
                       "places": 0
                     },
-                    "abbreviation": "none"
+                    "abbreviation": "none",
+                    "hideGroupSeparator": false
                   }
                 },
                 "y": {
@@ -6260,7 +6487,8 @@
                         "type": "max",
                         "places": 0
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -6272,7 +6500,8 @@
                         "type": "max",
                         "places": 2
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   }
                 ]
@@ -6354,7 +6583,8 @@
                         "type": "max",
                         "places": 0
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -6378,7 +6608,8 @@
                         "type": "max",
                         "places": 2
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -6390,7 +6621,8 @@
                         "type": "max",
                         "places": 0
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -6402,7 +6634,8 @@
                         "type": "max",
                         "places": 0
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   }
                 ]
@@ -6488,7 +6721,8 @@
                         "type": "max",
                         "places": 2
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -6500,7 +6734,8 @@
                         "type": "max",
                         "places": 2
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -6512,7 +6747,8 @@
                         "type": "max",
                         "places": 2
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   },
                   {
@@ -6524,7 +6760,8 @@
                         "type": "max",
                         "places": 2
                       },
-                      "abbreviation": "none"
+                      "abbreviation": "none",
+                      "hideGroupSeparator": false
                     }
                   }
                 ]
