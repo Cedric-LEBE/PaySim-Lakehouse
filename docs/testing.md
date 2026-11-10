@@ -182,4 +182,4 @@ Les quatre contrôles supplémentaires du générateur vérifient les chevauchem
 
 ## Terraform
 
-Le job `Terraform validation` vérifie le formatage, initialise les fournisseurs sans backend et valide séparément `infrastructure/aws/bootstrap` et `infrastructure/aws`. Versions et empreintes sont figées. Aucun identifiant AWS, plan connecté ni apply ne sont utilisés en CI. Les trois jobs doivent réussir pour autoriser le déploiement manuel Databricks.
+Le job `Terraform validation` vérifie le formatage, initialise les fournisseurs sans backend et valide séparément `infrastructure/aws/bootstrap` et `infrastructure/aws`. La version du fournisseur et les empreintes officielles des archives sont figées ; init complète localement l’empreinte du paquet décompressé pour la plateforme du runner. Aucun identifiant AWS, plan connecté ni apply ne sont utilisés en CI. Les trois jobs doivent réussir pour autoriser le déploiement manuel Databricks.

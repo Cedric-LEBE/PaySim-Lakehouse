@@ -114,6 +114,6 @@ jobs:
       - name: Validate bootstrap and adoption without AWS credentials
         run: |
           for directory in infrastructure/aws/bootstrap infrastructure/aws; do
-            terraform -chdir="$directory" init -backend=false -input=false -lockfile=readonly
+            terraform -chdir="$directory" init -backend=false -input=false
             terraform -chdir="$directory" validate
           done

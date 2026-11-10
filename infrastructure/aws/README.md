@@ -76,4 +76,6 @@ Local validation status: `terraform fmt -check` passed. Both adoption and bootst
 
 Both configurations have an S3 backend: bootstrap uses `paysim/bootstrap/terraform.tfstate`, adoption uses `paysim/aws/terraform.tfstate`. The user ran the migration workflow; retain a check of the remote object version as a recovery record. Do not publish state or plan files. Provider lock files include the official AWS 6.72.0 archive hashes for cross-platform installation and the validated local package hash.
 
-GitHub CI validates both configurations with `init -backend=false -lockfile=readonly`, formatting checks and `validate`, without AWS credentials or infrastructure changes. The manual Databricks deployment gate now requires all three CI jobs. Live drift detection, authenticated plans and apply are not automated yet.
+GitHub CI validates both configurations with `init -backend=false`, formatting checks and `validate`, without AWS credentials or infrastructure changes. The manual Databricks deployment gate now requires all three CI jobs. Live drift detection, authenticated plans and apply are not automated yet.
+
+The CI initialization may enrich its working-copy lock file with the Linux unpacked-package hash after checking the pinned archive against official `zh:` checksums. It does not upgrade the pinned provider. `-lockfile=readonly` is intentionally omitted: the Mac package hash alone cannot validate the Linux cache during the subsequent validate step. No lock or state is published from the runner.
