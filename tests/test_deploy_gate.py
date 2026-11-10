@@ -41,10 +41,10 @@ class DeployGateTests(unittest.TestCase):
             return {'jobs':jobs}
         return get
 
-    def test_exact_commit_and_both_jobs_are_required(self):
+    def test_exact_commit_and_all_jobs_are_required(self):
         self.assertTrue(gate.check_ci('owner/repo','abc',self.ci()))
         with self.assertRaisesRegex(ValueError,'moved'):gate.check_ci('owner/repo','abc',self.ci(head='def'))
-        with self.assertRaisesRegex(ValueError,'Both expected'):gate.check_ci('owner/repo','abc',self.ci(jobs=[{'name':n,'conclusion':'skipped'} for n in gate.EXPECTED_JOBS]))
+        with self.assertRaisesRegex(ValueError,'All expected'):gate.check_ci('owner/repo','abc',self.ci(jobs=[{'name':n,'conclusion':'skipped'} for n in gate.EXPECTED_JOBS]))
 
     def test_no_run_or_running_run_waits_instead_of_deploying(self):
         self.assertFalse(gate.check_ci('owner/repo','abc',self.ci(runs=[])))

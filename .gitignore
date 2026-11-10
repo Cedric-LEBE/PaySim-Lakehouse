@@ -20,3 +20,12 @@ metastore_db/
 .bundle/
 
 .databrickscfg
+
+# Terraform runtime files and local state/plans
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+*.tfvars.json
+crash.log

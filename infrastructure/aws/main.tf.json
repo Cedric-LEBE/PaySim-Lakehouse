@@ -1,0 +1,239 @@
+{
+  "terraform": {
+    "required_version": "~> 1.17.0",
+    "required_providers": {
+      "aws": {
+        "source": "hashicorp/aws",
+        "version": "6.72.0"
+      }
+    }
+  },
+  "provider": {
+    "aws": {
+      "region": "eu-north-1",
+      "allowed_account_ids": [
+        "968077439279"
+      ]
+    }
+  },
+  "data": {
+    "aws_vpc": {
+      "existing": {
+        "id": "vpc-0b9e35b9da014a713"
+      }
+    },
+    "aws_subnet": {
+      "existing": {
+        "id": "subnet-01b4f7d07f425ae22"
+      }
+    }
+  },
+  "resource": {
+    "aws_s3_bucket": {
+      "lakehouse": {
+        "bucket": "paysim-lakehouse-968077439279-eu-north-1-an",
+        "force_destroy": false,
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      }
+    },
+    "aws_s3_bucket_public_access_block": {
+      "lakehouse": {
+        "bucket": "${aws_s3_bucket.lakehouse.id}",
+        "block_public_acls": true,
+        "block_public_policy": true,
+        "ignore_public_acls": true,
+        "restrict_public_buckets": true,
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      }
+    },
+    "aws_s3_bucket_ownership_controls": {
+      "lakehouse": {
+        "bucket": "${aws_s3_bucket.lakehouse.id}",
+        "rule": [
+          {
+            "object_ownership": "BucketOwnerEnforced"
+          }
+        ],
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      }
+    },
+    "aws_s3_bucket_server_side_encryption_configuration": {
+      "lakehouse": {
+        "bucket": "${aws_s3_bucket.lakehouse.id}",
+        "rule": [
+          {
+            "apply_server_side_encryption_by_default": [
+              {
+                "sse_algorithm": "AES256"
+              }
+            ],
+            "bucket_key_enabled": true,
+            "blocked_encryption_types": [
+              "SSE-C"
+            ]
+          }
+        ],
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      }
+    },
+    "aws_iam_role": {
+      "ec2": {
+        "name": "PaySimLakehouseEC2Role",
+        "path": "/",
+        "max_session_duration": 3600,
+        "assume_role_policy": "{\"Version\": \"2012-10-17\", \"Statement\": [{\"Effect\": \"Allow\", \"Principal\": {\"Service\": \"ec2.amazonaws.com\"}, \"Action\": \"sts:AssumeRole\"}]}",
+        "description": "Allows EC2 instances to call AWS services on your behalf.",
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      },
+      "databricks_read": {
+        "name": "PaySimDatabricksReadRole",
+        "path": "/",
+        "max_session_duration": 3600,
+        "assume_role_policy": "{\"Version\": \"2012-10-17\", \"Statement\": [{\"Effect\": \"Allow\", \"Principal\": {\"AWS\": [\"arn:aws:iam::968077439279:role/PaySimDatabricksReadRole\", \"arn:aws:iam::414351767826:role/unity-catalog-prod-UCMasterRole-14S5ZJVKOTYTL\"]}, \"Action\": \"sts:AssumeRole\", \"Condition\": {\"StringEquals\": {\"sts:ExternalId\": \"e3b2b394-16bb-45a3-a509-52a257cf5ae5\"}}}]}",
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      }
+    },
+    "aws_iam_policy": {
+      "ec2_s3": {
+        "name": "PaySimLakehouseS3Access",
+        "path": "/",
+        "policy": "{\"Version\": \"2012-10-17\", \"Statement\": [{\"Sid\": \"ReadBucketRegion\", \"Effect\": \"Allow\", \"Action\": \"s3:GetBucketLocation\", \"Resource\": \"arn:aws:s3:::paysim-lakehouse-968077439279-eu-north-1-an\"}, {\"Sid\": \"ListProjectPrefixes\", \"Effect\": \"Allow\", \"Action\": \"s3:ListBucket\", \"Resource\": \"arn:aws:s3:::paysim-lakehouse-968077439279-eu-north-1-an\", \"Condition\": {\"StringLike\": {\"s3:prefix\": [\"raw/*\", \"exports/*\", \"runs/*\"]}}}, {\"Sid\": \"ReadWriteProjectObjects\", \"Effect\": \"Allow\", \"Action\": [\"s3:GetObject\", \"s3:PutObject\", \"s3:AbortMultipartUpload\", \"s3:ListMultipartUploadParts\"], \"Resource\": [\"arn:aws:s3:::paysim-lakehouse-968077439279-eu-north-1-an/raw/*\", \"arn:aws:s3:::paysim-lakehouse-968077439279-eu-north-1-an/exports/*\", \"arn:aws:s3:::paysim-lakehouse-968077439279-eu-north-1-an/runs/*\"]}]}",
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      }
+    },
+    "aws_iam_role_policy_attachment": {
+      "ec2_s3": {
+        "role": "${aws_iam_role.ec2.name}",
+        "policy_arn": "${aws_iam_policy.ec2_s3.arn}",
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      }
+    },
+    "aws_iam_role_policy": {
+      "databricks_exports": {
+        "name": "PaySimExportsReadOnly",
+        "role": "${aws_iam_role.databricks_read.name}",
+        "policy": "{\"Version\": \"2012-10-17\", \"Statement\": [{\"Sid\": \"ReadBucketRegion\", \"Effect\": \"Allow\", \"Action\": \"s3:GetBucketLocation\", \"Resource\": \"arn:aws:s3:::paysim-lakehouse-968077439279-eu-north-1-an\"}, {\"Sid\": \"ListExports\", \"Effect\": \"Allow\", \"Action\": \"s3:ListBucket\", \"Resource\": \"arn:aws:s3:::paysim-lakehouse-968077439279-eu-north-1-an\", \"Condition\": {\"StringLike\": {\"s3:prefix\": [\"exports\", \"exports/*\"]}}}, {\"Sid\": \"ReadExportObjects\", \"Effect\": \"Allow\", \"Action\": \"s3:GetObject\", \"Resource\": \"arn:aws:s3:::paysim-lakehouse-968077439279-eu-north-1-an/exports/*\"}]}",
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      }
+    },
+    "aws_iam_instance_profile": {
+      "ec2": {
+        "name": "PaySimLakehouseEC2Role",
+        "path": "/",
+        "role": "${aws_iam_role.ec2.name}",
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      }
+    },
+    "aws_security_group": {
+      "pipeline": {
+        "name": "launch-wizard-1",
+        "description": "launch-wizard-1 created 2026-11-08T16:09:37.064Z",
+        "vpc_id": "${data.aws_vpc.existing.id}",
+        "ingress": [
+          {
+            "from_port": 22,
+            "to_port": 22,
+            "protocol": "tcp",
+            "cidr_blocks": [
+              "37.166.3.84/32"
+            ],
+            "ipv6_cidr_blocks": [],
+            "prefix_list_ids": [],
+            "security_groups": [],
+            "self": false,
+            "description": ""
+          }
+        ],
+        "egress": [
+          {
+            "from_port": 0,
+            "to_port": 0,
+            "protocol": "-1",
+            "cidr_blocks": [
+              "0.0.0.0/0"
+            ],
+            "ipv6_cidr_blocks": [],
+            "prefix_list_ids": [],
+            "security_groups": [],
+            "self": false,
+            "description": ""
+          }
+        ],
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      }
+    },
+    "aws_instance": {
+      "pipeline": {
+        "ami": "ami-0fd9576cca965bd19",
+        "instance_type": "m7i-flex.large",
+        "subnet_id": "${data.aws_subnet.existing.id}",
+        "availability_zone": "eu-north-1c",
+        "key_name": "paysim-ec2",
+        "associate_public_ip_address": true,
+        "private_ip": "172.31.0.230",
+        "vpc_security_group_ids": [
+          "${aws_security_group.pipeline.id}"
+        ],
+        "iam_instance_profile": "${aws_iam_instance_profile.ec2.name}",
+        "ebs_optimized": true,
+        "monitoring": false,
+        "tags": {
+          "Name": "paysim-lakehouse"
+        },
+        "metadata_options": [
+          {
+            "http_endpoint": "enabled",
+            "http_tokens": "required",
+            "http_put_response_hop_limit": 2,
+            "http_protocol_ipv6": "disabled",
+            "instance_metadata_tags": "disabled"
+          }
+        ],
+        "root_block_device": [
+          {
+            "volume_type": "gp3",
+            "volume_size": 100,
+            "iops": 3000,
+            "throughput": 125,
+            "encrypted": true,
+            "kms_key_id": "arn:aws:kms:eu-north-1:968077439279:key/af438572-f234-416a-9db1-152e6cdabfe1",
+            "delete_on_termination": true
+          }
+        ],
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      }
+    }
+  },
+  "output": {
+    "instance_id": {
+      "value": "${aws_instance.pipeline.id}"
+    },
+    "bucket_name": {
+      "value": "${aws_s3_bucket.lakehouse.id}"
+    }
+  }
+}

@@ -7,7 +7,7 @@ import time
 from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
 
-EXPECTED_JOBS = {'Unit tests (Python 3.13)', 'Incremental pipeline (Spark / Delta)'}
+EXPECTED_JOBS = {'Unit tests (Python 3.13)', 'Incremental pipeline (Spark / Delta)', 'Terraform validation'}
 
 
 def check_config(env):
@@ -67,7 +67,7 @@ def check_ci(repo, sha, get=api_get):
         page += 1
     passed = {j['name'] for j in jobs if j.get('conclusion') == 'success'}
     if not EXPECTED_JOBS.issubset(passed):
-        raise ValueError('Both expected CI jobs must succeed; skipped jobs do not qualify.')
+        raise ValueError('All expected CI jobs must succeed; skipped jobs do not qualify.')
     return True
 
 

@@ -4,7 +4,7 @@
 
 An incremental lakehouse for simulated banking transactions: Kafka ingestion, Bronze/Silver/Gold Delta tables, data quality controls, business deduplication, a star schema and Databricks analytics dashboards.
 
-**Current status:** all **6,362,620 PaySim transactions** have been processed and validated on AWS EC2, exported to S3, and imported into Databricks. Historical local reference runs are retained below. The star schema has been imported into Databricks Free Edition, and a four-page dashboard and import job are deployed using Declarative Automation Bundles (DAB). Fraud metrics describe the dataset's labels; predictive modeling, VPS deployment and AWS infrastructure remain planned work.
+**Current status:** all **6,362,620 PaySim transactions** have been processed and validated on AWS EC2, exported to S3, and imported into Databricks. Historical local reference runs are retained below. The star schema has been imported into Databricks Free Edition, and a four-page dashboard and import job are deployed using Declarative Automation Bundles (DAB). Fraud metrics describe the dataset's labels. Remaining work focuses on Terraform adoption of the existing AWS resources, measured performance, orchestration, operations and portfolio documentation. Machine learning is outside the delivery scope. See the [delivery roadmap](docs/roadmap.md) and [AWS inventory procedure](infrastructure/aws/README.md).
 
 ## Architecture
 

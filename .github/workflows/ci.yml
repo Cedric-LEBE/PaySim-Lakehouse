@@ -88,3 +88,32 @@ jobs:
         env:
           BANKING_SPARK_APP: tests/integration/import_star_check.py
         run: bash scripts/bronze.sh
+
+  terraform:
+    name: Terraform validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install verified Terraform 1.17.1
+        env:
+          TERRAFORM_SHA256: 4638628058e71a55212b1c563712eac03b902128f40740f3dc8174df12135061
+        run: |
+          curl --fail --silent --show-error --location --retry 3 https://releases.hashicorp.com/terraform/1.17.1/terraform_1.17.1_linux_amd64.zip --output "$RUNNER_TEMP/terraform.zip"
+          echo "$TERRAFORM_SHA256  $RUNNER_TEMP/terraform.zip" | sha256sum --check
+          unzip -q "$RUNNER_TEMP/terraform.zip" -d "$RUNNER_TEMP/terraform-bin"
+          echo "$RUNNER_TEMP/terraform-bin" >> "$GITHUB_PATH"
+
+      - name: Check Terraform formatting
+        run: terraform fmt -check -recursive infrastructure/aws
+
+      - name: Validate bootstrap and adoption without AWS credentials
+        run: |
+          for directory in infrastructure/aws/bootstrap infrastructure/aws; do
+            terraform -chdir="$directory" init -backend=false -input=false -lockfile=readonly
+            terraform -chdir="$directory" validate
+          done

@@ -1,0 +1,52 @@
+{
+  "import": [
+    {
+      "to": "aws_s3_bucket.lakehouse",
+      "id": "paysim-lakehouse-968077439279-eu-north-1-an"
+    },
+    {
+      "to": "aws_s3_bucket_public_access_block.lakehouse",
+      "id": "paysim-lakehouse-968077439279-eu-north-1-an"
+    },
+    {
+      "to": "aws_s3_bucket_ownership_controls.lakehouse",
+      "id": "paysim-lakehouse-968077439279-eu-north-1-an"
+    },
+    {
+      "to": "aws_s3_bucket_server_side_encryption_configuration.lakehouse",
+      "id": "paysim-lakehouse-968077439279-eu-north-1-an"
+    },
+    {
+      "to": "aws_iam_role.ec2",
+      "id": "PaySimLakehouseEC2Role"
+    },
+    {
+      "to": "aws_iam_role.databricks_read",
+      "id": "PaySimDatabricksReadRole"
+    },
+    {
+      "to": "aws_iam_policy.ec2_s3",
+      "id": "arn:aws:iam::968077439279:policy/PaySimLakehouseS3Access"
+    },
+    {
+      "to": "aws_iam_role_policy_attachment.ec2_s3",
+      "id": "PaySimLakehouseEC2Role/arn:aws:iam::968077439279:policy/PaySimLakehouseS3Access"
+    },
+    {
+      "to": "aws_iam_role_policy.databricks_exports",
+      "id": "PaySimDatabricksReadRole:PaySimExportsReadOnly"
+    },
+    {
+      "to": "aws_iam_instance_profile.ec2",
+      "id": "PaySimLakehouseEC2Role"
+    },
+    {
+      "to": "aws_security_group.pipeline",
+      "id": "sg-0a5e012ebd8a244aa"
+    },
+    {
+      "to": "aws_instance.pipeline",
+      "id": "i-093fc1b9280b981f0"
+    }
+  ]
+}

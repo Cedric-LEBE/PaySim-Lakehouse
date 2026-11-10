@@ -2,37 +2,25 @@
 
 [Retour au README](../README.md)
 
-## Disponible
+## Périmètre
 
-| Domaine | Fonctionnalités |
-| --- | --- |
-| Ingestion | Kafka KRaft local, topic partitionné, producer CSV à débit limité, consumer avec confirmation manuelle |
-| Bronze | Structured Streaming, conservation brute, checkpoint durable et reprise des offsets |
-| Silver | CDF incrémental, MERGE, reprise, Decimal, quarantaine et conflits d'identité inter-versions |
-| Gold | Agrégats incrémentaux CDF, contributions signées, reprise sans double comptage et rapprochement CSV |
-| Modèle dimensionnel | Faits incrémentaux, trois dimensions conservées, deux rôles compte, clés stables, reprise et manifeste de versions |
-| Orchestration locale | Lanceur complet avec vérification CSV, arrêt sur erreur, nettoyage Kafka, verrou et journaux chronométrés |
-| Exploration | Requêtes Spark SQL sur un instantané cohérent de l'étoile |
-| Validation | Tests unitaires et scénario incrémental synthétique en GitHub Actions ; tests locaux approfondis de reprise, qualité, précision et jointures |
+Le projet couvre le Data Engineering et l'infrastructure. Le machine learning ne fait pas partie des critères de livraison.
 
-Le périmètre validé de bout en bout comprend les préfixes de 100, 10 000 et 250 000 transactions. Silver, Gold et le modèle dimensionnel sont incrémentaux après initialisation complète. Le dépôt fournit une plateforme locale de préparation et d'analyse des données ; la prédiction de fraude est une évolution distincte.
+## Réalisé
 
-## Prochaines étapes locales
+- Kafka KRaft, producer CSV à débit limité, Bronze Structured Streaming et checkpoints.
+- Silver, Gold et étoile incrémentaux, contrôles qualité, déduplication, reprise et rapprochement.
+- Traitement validé des **6 362 620 transactions** sur EC2, dont **8 213 fraudes étiquetées**.
+- Export vérifié, publication S3 et import Delta Databricks via un volume externe Unity Catalog en lecture seule.
+- Quatre pages de dashboard en anglais ; refonte et lisibilité confirmées visuellement.
+- CI GitHub Actions et déploiement DAB ; 42 tests unitaires et intégration Spark/Delta.
 
-- Élargir progressivement l'échantillon pour couvrir plusieurs heures et mesurer RAM, disque et temps de traitement.
-- Tester une interruption pendant une écriture Bronze et une perte d'offsets liée à la rétention Kafka.
-- Mesurer et optimiser les scans de validation et les MERGE avant le dataset complet.
-- Étendre la CI aux scénarios d'interruption et à Kafka lorsque le temps et les ressources d'exécution le permettent.
-- Finaliser la vérification visuelle du dashboard DAB, puis importer les tables de suivi pour une page qualité.
-- Évaluer une approche de détection de fraude avec séparation entraînement/évaluation et prévention des fuites de labels.
+## Travail restant, dans l'ordre
 
-## Déploiement et industrialisation
+1. **Infrastructure reproductible** : [inventaire AWS et adoption Terraform](../infrastructure/aws/README.md). Inventaire reçu, bucket d'état créé (6 ressources), adoption de 12 ressources réalisée sans modification AWS, plans finaux sans différence. Validation Terraform sans identifiants AWS ajoutée à la CI. La généralisation en modules réutilisables et la supervision de dérive restent des évolutions possibles.
+2. **Performances** : exploiter les rapports réels par étape, mesurer les scans et rapprochements cumulatifs, optimiser sans réduire les garanties de qualité et de reprise. La durée proche de 24 heures est un constat utilisateur à préciser à partir des rapports, pas un benchmark instrumenté.
+3. **Orchestration et supervision** : compléter le lanceur et ses journaux par un parcours EC2 → export S3 → import Databricks, avec détection des échecs, reprise contrôlée et prévention des exécutions concurrentes.
+4. **Exploitation** : vérifier sauvegarde/restauration, documenter les arrêts, coûts mesurés, rétention et démantèlement. Un export de l'étoile n'est pas à lui seul une sauvegarde des tables et checkpoints de reprise.
+5. **Portfolio** : harmoniser le README anglais et les documents avec l'architecture réelle, ajouter captures, résultats et procédure de démonstration reproductible.
 
-| Étape | Travail prévu avant déploiement |
-| --- | --- |
-| VPS | Dimensionnement à partir de mesures, budget, persistance, exploitation et accès Kafka sécurisé |
-| AWS | Stockage S3, rôles IAM à privilèges minimaux, budget et cycle de vie des ressources |
-| Databricks | Vérification des capacités de l'environnement retenu, connectivité Kafka, tables et gouvernance Unity Catalog |
-| Livraison | Bundle dashboard/job disponible ; workflow manuel GitHub préparé, activation OIDC bloquée par les limites de compte Free Edition |
-
-Le VPS, le provisionnement AWS et l’activation du déploiement GitHub ne sont pas réalisés dans la version actuelle. Aucun provisionnement ni coût cloud n'est nécessaire pour le parcours local. Le choix d'une offre VPS ou Databricks sera vérifié au moment du déploiement.
+La livraison sera considérée complète après validation de ces cinq points. Aucun VPS supplémentaire ni extension prédictive n'est nécessaire.

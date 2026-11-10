@@ -179,3 +179,7 @@ Références : [construire et tester Python avec GitHub Actions](https://docs.gi
 ## Présentation du dashboard complet
 
 Les quatre contrôles supplémentaires du générateur vérifient les chevauchements et largeurs de grille, les formats pourcentage sans mise à l'échelle des données ni conversion des rangs en pourcentages, les compteurs entiers et références obsolètes, et le maintien des soldes après séparation du tableau de détail. La suite compte désormais 42 tests unitaires. Les calculs des 17 datasets sont conservés ; quatre datasets enveloppent leurs résultats pour produire les colonnes de légende. Un test supplémentaire impose que les widgets sélectionnent ces colonnes réelles, sans expression littérale uniquement côté widget. Les KPI du nouvel instantané Databricks ont été rapprochés avec le manifeste S3 (6 362 620 faits et 8 213 fraudes) ; le contrôle local historique `dashboard_analytics_check.py` reste volontairement dédié au préfixe de 250 000 lignes. Le rendu visuel final doit être vérifié dans le client Databricks.
+
+## Terraform
+
+Le job `Terraform validation` vérifie le formatage, initialise les fournisseurs sans backend et valide séparément `infrastructure/aws/bootstrap` et `infrastructure/aws`. Versions et empreintes sont figées. Aucun identifiant AWS, plan connecté ni apply ne sont utilisés en CI. Les trois jobs doivent réussir pour autoriser le déploiement manuel Databricks.
