@@ -84,6 +84,11 @@ jobs:
           BANKING_SPARK_APP: tests/integration/replay_resume_check.py
         run: bash scripts/bronze.sh
 
+      - name: Run bounded performance harness on two synthetic rows
+        env:
+          BANKING_SPARK_APP: tests/performance/bounded_replay.py
+        run: bash scripts/bronze.sh --csv tests/fixtures/paysim_synthetic.csv --rows 2 --batch-size 1
+
       - name: Run verified export import scenario
         env:
           BANKING_SPARK_APP: tests/integration/import_star_check.py

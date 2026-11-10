@@ -183,3 +183,5 @@ Les quatre contrôles supplémentaires du générateur vérifient les chevauchem
 ## Terraform
 
 Le job `Terraform validation` vérifie le formatage, initialise les fournisseurs sans backend et valide séparément `infrastructure/aws/bootstrap` et `infrastructure/aws`. La version du fournisseur et les empreintes officielles des archives sont figées ; init complète localement l’empreinte du paquet décompressé pour la plateforme du runner. Aucun identifiant AWS, plan connecté ni apply ne sont utilisés en CI. Les trois jobs doivent réussir pour autoriser le déploiement manuel Databricks.
+
+Le scénario CI `bounded_replay.py` utilise deux transactions synthétiques en deux lots, un dossier neuf et des chemins Spark absolus. Il vérifie les transformations et le rapprochement complet après chaque lot ; ce smoke test valide le lanceur de mesure, sans constituer un benchmark de performances.

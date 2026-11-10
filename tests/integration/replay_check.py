@@ -14,8 +14,10 @@ from pyspark.sql import functions as F
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--max-messages', type=int, default=10000)
+parser.add_argument('--data-root', type=Path, default=Path('data'))
 parser.add_argument('--csv', type=Path, default=Path('data/raw/PS_20174392719_1491204439457_log.csv'))
 args = parser.parse_args()
+data_root = args.data_root.resolve()
 if args.max_messages <= 0:
     parser.error('max-messages doit être positif')
 
@@ -29,7 +31,7 @@ spark = session()
 spark.sparkContext.setLogLevel('WARN')
 try:
     with measure('verify', 'compare_csv_silver_and_expected_totals'):
-        silver = spark.read.format('delta').load('data/silver/transactions')
+        silver = spark.read.format('delta').load(str(data_root / 'silver/transactions'))
         expected = records(args.csv, DATASET, args.max_messages)
         # Only one Spark partition is transferred at a time; the CSV is streamed.
         actual = (silver.select('event_id', 'dataset_id', 'source_row', *FIELDS)
@@ -53,7 +55,7 @@ try:
                     totals['fraud_amount'] += Decimal(transaction['amount'])
         assert count == args.max_messages, 'CSV plus court que le périmètre demandé'
     with measure('verify', 'reconcile_gold'):
-        gold_tables = read_tables(spark, 'data/gold')
+        gold_tables = read_tables(spark, data_root / 'gold')
         for table, key in [('summary', None), ('by_type', 'type'), ('by_step', 'step')]:
             output = gold_tables[table].collect()
             assert len(output) == len(groups[table])
@@ -63,7 +65,7 @@ try:
                 for metric, value in groups[table][group].items():
                     assert row[metric] == value, (table, group, metric)
     with measure('verify', 'reconcile_star_facts'):
-        manifest = register_views(spark, 'data/gold/star')
+        manifest = register_views(spark, data_root / 'gold/star')
         fact = spark.table('fact_transaction')
         assert fact.count() == fact.select('transaction_key').distinct().count() == count
         assert fact.select('transaction_key').subtract(silver.select('event_id')).count() == 0

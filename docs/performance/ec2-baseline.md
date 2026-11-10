@@ -53,3 +53,17 @@ The full checks remain enabled. Star incremental emits structured `TIMING:` JSON
 Timings go to the existing stage logs, without changing checkpoint or publication formats. They include wall time and lazy Spark actions executed inside each span; they are not independent CPU timings and cannot be summed across different processes as elapsed calendar time. The comparison span includes Spark iterator preparation, row transfer, Python CSV comparison and expected aggregate construction. Snapshot caching is populated by actions, so later phase costs can depend on earlier phases.
 
 Do not run a production replay to collect these measurements. First exercise the synthetic integration scenarios; then benchmark identical bounded input prefixes in separate data roots/checkpoints on the same machine, with fixed rate/offset settings. Record cold/warm dependencies and retain full verification. Only after collecting these substep timings should an optimization experiment change validation scheduling.
+
+## Bounded EC2 measurement command
+
+Update the repository before running this from its root, with no concurrent pipeline:
+
+```bash
+mkdir -p data/performance
+BANKING_SPARK_APP=tests/performance/bounded_replay.py bash scripts/bronze.sh \
+  --rows 10000 --batch-size 5000 > data/performance/bounded-10000.log 2>&1
+```
+
+The runner always creates a fresh UUID directory under `data/performance/`; it has no production output override and passes absolute isolated paths to Spark and to the verifier (`--data-root`), independently of Python/JVM working directories. It validates the bounded input, appends synthetic Kafka envelopes directly into isolated Bronze, runs the real incremental builders, then executes the existing complete CSV/Gold/star verification after every batch. No broker, production tables or checkpoints are used. The source CSV is read-only. A JSON report records stage durations and failures; structured phase timings remain in the log. There is no automatic deletion.
+
+This is a transformation/validation benchmark, not end-to-end Kafka ingestion. Spark session start/stop, dependency cache state and direct Bronze input differ from the historical pipeline; do not present it as an equivalent full-pipeline speedup. Run the same bounded command before and after a future change on the same host. The first run establishes an instrumented baseline, not a performance improvement. Input is capped at 50,000 rows. Use `--dry-run` to inspect scope without Spark/output writes.
