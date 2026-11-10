@@ -208,3 +208,7 @@ The local single Kafka broker uses replication factor 1 and loopback-only PLAINT
 **[Synthetic Financial Datasets for Fraud Detection — PaySim](https://www.kaggle.com/datasets/ealaxi/paysim1)**, published by Edgar Alonso Lopez-Rojas.
 
 Reference: E. A. Lopez-Rojas, A. Elmir and S. Axelsson, *PaySim: A financial mobile money simulator for fraud detection*, EMSS, 2016. Dataset use is subject to the terms on its source page. The CSV is not redistributed in this repository.
+
+## Performance baseline
+
+The complete EC2 replay comprises 128 successful batches, with 26.72 hours of recorded execution time (excluding gaps). Full reconciliation accounts for 29% and star processing for 24%. See the [measured baseline and limitations](docs/performance/ec2-baseline.md). Phase instrumentation is available for controlled optimization experiments; no measured speedup is claimed yet.

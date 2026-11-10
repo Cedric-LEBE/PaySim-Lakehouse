@@ -1,6 +1,7 @@
 """Incremental fact MERGE and insert-only dimensions, published through one manifest."""
 import fcntl
 import json
+from banking.timing import measure
 from pathlib import Path
 from banking.star import TABLE_KEYS, frames, validate
 from banking.silver_incremental import ensure_published, publish, merge
@@ -56,7 +57,8 @@ def build(spark, source, output):
         changes = None
         decisions = None
         try:
-            check = validate(snapshot)
+            with measure('star', 'validate_silver_snapshot'):
+                check = validate(snapshot)
             if bootstrap:
                 changes = snapshot
                 current = snapshot
@@ -70,45 +72,48 @@ def build(spark, source, output):
                 count = validate(changes, unique=False).rows
                 touched = changes.select('event_id').distinct()
                 current = snapshot.join(touched, 'event_id', 'left_semi')
-            dimensions = frames(changes)
-            # Dimension rows are never removed, even when all their facts disappear.
-            for name, primary in TABLE_KEYS.items():
-                if name == 'fact_transaction':
-                    continue
-                incoming = dimensions[name].withColumn('silver_version', F.lit(end))
-                path = output / name
-                if not (path / '_delta_log').exists():
-                    incoming.write.format('delta').save(str(path))
-                else:
-                    (DeltaTable.forPath(spark, str(path)).alias('t').merge(incoming.alias('s'), f't.{primary} = s.{primary}')
-                     .whenNotMatchedInsertAll().execute())
-            facts = frames(current)['fact_transaction'].withColumn('silver_version', F.lit(end))
-            decisions = facts.withColumn('_delete', F.lit(False))
-            if not bootstrap:
-                deleted = (dimensions['fact_transaction'].join(facts.select('transaction_key'), 'transaction_key', 'left_anti')
-                           .dropDuplicates(['transaction_key']).withColumn('silver_version', F.lit(end))
-                           .withColumn('_delete', F.lit(True)))
-                decisions = decisions.unionByName(deleted)
-            decisions = decisions.localCheckpoint(eager=True, storageLevel=StorageLevel.DISK_ONLY)
-            merge(spark, output / 'fact_transaction', decisions, 't.transaction_key = s.transaction_key', bootstrap, delete=True)
-            tables = {name: spark.read.format('delta').load(str(output / name)) for name in TABLE_KEYS}
-            counts = {}
-            for name, frame in tables.items():
-                primary = TABLE_KEYS[name]
-                stats = frame.agg(F.count('*').alias('rows'), F.countDistinct(primary).alias('ids')).first()
-                if stats.rows != stats.ids:
-                    raise ValueError('Clé étoile absente ou dupliquée : ' + name)
-                counts[name] = stats.rows
-            fact = tables['fact_transaction']
-            for fk, dimension, pk in [
-                ('transaction_type_key', 'dim_transaction_type', 'transaction_type_key'),
-                ('simulation_time_key', 'dim_simulation_time', 'simulation_time_key'),
-                ('origin_account_key', 'dim_account', 'account_key'),
-                ('destination_account_key', 'dim_account', 'account_key')]:
-                if fact.join(tables[dimension], fact[fk] == tables[dimension][pk], 'left_anti').limit(1).count():
-                    raise ValueError('Référence dimension absente : ' + fk)
-            if counts['fact_transaction'] != check.rows or fact.select('transaction_key').subtract(snapshot.select('event_id')).limit(1).count():
-                raise ValueError('Faits différents du périmètre Silver')
+            with measure('star', 'merge_dimensions'):
+                dimensions = frames(changes)
+                # Dimension rows are never removed, even when all their facts disappear.
+                for name, primary in TABLE_KEYS.items():
+                    if name == 'fact_transaction':
+                        continue
+                    incoming = dimensions[name].withColumn('silver_version', F.lit(end))
+                    path = output / name
+                    if not (path / '_delta_log').exists():
+                        incoming.write.format('delta').save(str(path))
+                    else:
+                        (DeltaTable.forPath(spark, str(path)).alias('t').merge(incoming.alias('s'), f't.{primary} = s.{primary}')
+                         .whenNotMatchedInsertAll().execute())
+            with measure('star', 'merge_facts'):
+                facts = frames(current)['fact_transaction'].withColumn('silver_version', F.lit(end))
+                decisions = facts.withColumn('_delete', F.lit(False))
+                if not bootstrap:
+                    deleted = (dimensions['fact_transaction'].join(facts.select('transaction_key'), 'transaction_key', 'left_anti')
+                               .dropDuplicates(['transaction_key']).withColumn('silver_version', F.lit(end))
+                               .withColumn('_delete', F.lit(True)))
+                    decisions = decisions.unionByName(deleted)
+                decisions = decisions.localCheckpoint(eager=True, storageLevel=StorageLevel.DISK_ONLY)
+                merge(spark, output / 'fact_transaction', decisions, 't.transaction_key = s.transaction_key', bootstrap, delete=True)
+            with measure('star', 'validate_published_tables'):
+                tables = {name: spark.read.format('delta').load(str(output / name)) for name in TABLE_KEYS}
+                counts = {}
+                for name, frame in tables.items():
+                    primary = TABLE_KEYS[name]
+                    stats = frame.agg(F.count('*').alias('rows'), F.countDistinct(primary).alias('ids')).first()
+                    if stats.rows != stats.ids:
+                        raise ValueError('Clé étoile absente ou dupliquée : ' + name)
+                    counts[name] = stats.rows
+                fact = tables['fact_transaction']
+                for fk, dimension, pk in [
+                    ('transaction_type_key', 'dim_transaction_type', 'transaction_type_key'),
+                    ('simulation_time_key', 'dim_simulation_time', 'simulation_time_key'),
+                    ('origin_account_key', 'dim_account', 'account_key'),
+                    ('destination_account_key', 'dim_account', 'account_key')]:
+                    if fact.join(tables[dimension], fact[fk] == tables[dimension][pk], 'left_anti').limit(1).count():
+                        raise ValueError('Référence dimension absente : ' + fk)
+                if counts['fact_transaction'] != check.rows or fact.select('transaction_key').subtract(snapshot.select('event_id')).limit(1).count():
+                    raise ValueError('Faits différents du périmètre Silver')
             versions = {name: DeltaTable.forPath(spark, str(output / name)).history(1).first()['version'] for name in TABLE_KEYS}
             manifest = {'format_version': 1, 'silver_path': str(source), 'silver_version': end,
                         'table_versions': versions, 'counts': counts}
