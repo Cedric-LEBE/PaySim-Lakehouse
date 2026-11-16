@@ -189,3 +189,18 @@ bash scripts/star.sh --mode batch --output data/star-reference
 | `EOFError` ou lecture bloquée dans les dépendances | Vérifier que les fichiers sont réellement locaux et que l'environnement est complet |
 
 Les avertissements `jdk.incubator.vector`, `NativeCodeLoader` avec repli Java et `SparkStringUtils` sur la représentation du plan ne suffisent pas à indiquer un échec. Contrôler le résultat final et le code de sortie ; le message SparkStringUtils ne signifie pas que des lignes de données ont été tronquées.
+
+
+## Supervision locale sans Spark
+
+Depuis EC2, dans le dépôt :
+
+```bash
+PYTHONPATH=src .venv/bin/python -m banking.health
+```
+
+Le contrôle lit le curseur, le manifeste de publication et le dernier rapport. Il respecte le verrou du pipeline : `running` signifie que le verrou est occupé, sans conclure que le traitement progresse. `complete` signifie que le préfixe validé atteint la cible et correspond au manifeste local. `ready_to_resume` indique un préfixe cohérent mais inférieur à la cible. `attention` signale un lot en attente, un échec récent ou une incohérence ; `unknown` signale des métadonnées manquantes. Code de sortie 0 pour `running`/`complete`, 1 sinon. Aucune publication, réparation ou reprise automatique n'est effectuée.
+
+Ce contrôle ne démarre pas Spark/Kafka, n'analyse pas les tables Delta et ne vérifie ni S3 ni Databricks. Il ne prouve ni l'absence de blocage d'un processus actif ni l'intégrité d'une sauvegarde. La comparaison des données reste assurée par le pipeline et ses contrôles existants. Ne jamais corriger un incident en modifiant manuellement le curseur.
+
+La suite d'orchestration prévue reliera l'export vérifié, sa publication S3 (manifeste en dernier) et le job d'import Databricks. Les statuts de ces étapes distantes devront être suivis séparément du succès local. Aucun nouvel export ou import du dataset complet n'est nécessaire pour préparer ce mécanisme.

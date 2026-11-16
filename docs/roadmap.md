@@ -24,3 +24,5 @@ Le projet couvre le Data Engineering et l'infrastructure. Le machine learning ne
 5. **Portfolio** : harmoniser le README anglais et les documents avec l'architecture réelle, ajouter captures, résultats et procédure de démonstration reproductible.
 
 La livraison sera considérée complète après validation de ces cinq points. Aucun VPS supplémentaire ni extension prédictive n'est nécessaire.
+
+Décision de périmètre : les mesures de performance et le benchmark borné sont conservés comme référence. Les essais d’optimisation supplémentaires sont reportés ; la priorité passe à l’orchestration, la supervision, la sauvegarde/restauration et la documentation finale.
