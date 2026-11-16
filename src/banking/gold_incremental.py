@@ -56,7 +56,6 @@ def build(spark, source, output):
         changes = None
         updates = {}
         try:
-            # Validation still scans the pinned snapshot; business aggregates use CDF deltas.
             check = validate(snapshot)
             if bootstrap:
                 changed_count = check.rows

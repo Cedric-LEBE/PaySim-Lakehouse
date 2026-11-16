@@ -18,7 +18,6 @@ def decode(payload):
     row = item.get('transaction')
     if not isinstance(row, dict):
         raise ValueError('transaction invalide')
-    # The version-1 producer emits decimal strings and integer step/labels.
     if any(type(row.get(k)) is not int for k in ['step', 'isFraud', 'isFlaggedFraud']):
         raise ValueError('Types entiers invalides')
     if any(not isinstance(v, str) for k, v in row.items() if k not in ['step', 'isFraud', 'isFlaggedFraud']):

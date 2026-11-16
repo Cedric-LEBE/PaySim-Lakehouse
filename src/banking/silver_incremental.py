@@ -64,7 +64,6 @@ def build(spark, source, output, dataset=DATASET):
             if any(state.get(k) != v for k, v in identity.items()):
                 raise ValueError('État Silver associé à une autre source ou un autre dataset')
         else:
-            # Enable CDF before choosing the initial snapshot, without changing Bronze rows.
             spark.sql(f"ALTER TABLE delta.`{str(source).replace('`', '``')}` SET TBLPROPERTIES (delta.enableChangeDataFeed = true)")
             state = {**identity, 'bronze_version': -1}
             publish(marker, state)

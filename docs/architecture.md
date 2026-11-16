@@ -14,6 +14,14 @@ flowchart TB
     Silver --> Metrics[Gold · agrégats descriptifs]
     Silver --> Star[Gold · fait et dimensions]
     Star --> SQL[Vues temporaires Spark SQL]
+    Star --> Export[Parquet vérifié + manifeste]
+    Export --> S3[S3 privé]
+    S3 --> UC[Volume externe Unity Catalog · lecture seule]
+    UC --> Import[Job Databricks · contrôles et import Delta]
+    Import --> BI[Dashboard anglais · quatre pages]
+    GitHub[GitHub Actions] -.-> DAB[DAB · définitions du job et dashboard]
+    DAB -.-> Import
+    DAB -.-> BI
 ```
 
 Le producer et Spark s'exécutent sur l'hôte ; seul Kafka s'exécute dans Docker. Bronze utilise Structured Streaming avec `availableNow` : les données disponibles au démarrage sont traitées en micro-batches, puis la requête s'arrête. Silver, Gold et l'étoile utilisent des traitements incrémentaux bornés par versions Delta après initialisation.
@@ -113,3 +121,9 @@ La validation de bout en bout porte sur un petit échantillon, sans benchmark du
 La fraude est analysée à partir des labels simulés. Un lanceur local orchestre les étapes successives et vérifie le résultat du rejeu. La prédiction, la supervision continue, le déploiement distant et l'intégration AWS/Databricks restent des évolutions prévues.
 
 Références : [Spark et Kafka](https://spark.apache.org/docs/4.0.1/streaming/structured-streaming-kafka-integration.html), [streaming Delta](https://docs.delta.io/delta-streaming/), [lectures/écritures batch Delta](https://docs.delta.io/delta-batch/), [Change Data Feed Delta](https://docs.delta.io/delta-change-data-feed/).
+
+## Infrastructure et récupération validées
+
+Kafka et Spark s’exécutent sur EC2 ; les couches Delta restent sur son volume EBS. Les exports vérifiés sont publiés sur S3 et importés dans les tables gérées Databricks. Le dashboard lit un instantané, pas un flux Kafka direct. Terraform adopte l’infrastructure AWS existante ; DAB gère les définitions Databricks, sans créer le compte AWS ou la connexion IAM/Unity Catalog.
+
+Le lanceur de [publication reprenable](publication.md) a passé un test réel et sa relance. Un [test de restauration EBS](recovery.md) a vérifié CSV, métadonnées et lecture/effectifs des tables étoile. Les limites précises figurent au [registre de validation](validation-record.md).

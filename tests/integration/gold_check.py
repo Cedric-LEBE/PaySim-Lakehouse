@@ -47,7 +47,6 @@ try:
     empty = metrics(sample.limit(0)).first()
     assert empty.total_transactions == 0 and empty.total_amount == 0 and empty.fraud_amount == 0
     assert empty.avg_amount is None and empty.fraud_rate is None
-    # Invalid source must fail before writing metrics.
     silver.unionByName(silver.limit(1)).write.format('delta').save(str(root / 'duplicated-silver'))
     try:
         build(spark, root / 'duplicated-silver', root / 'invalid-gold')

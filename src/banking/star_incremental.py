@@ -74,7 +74,6 @@ def build(spark, source, output):
                 current = snapshot.join(touched, 'event_id', 'left_semi')
             with measure('star', 'merge_dimensions'):
                 dimensions = frames(changes)
-                # Dimension rows are never removed, even when all their facts disappear.
                 for name, primary in TABLE_KEYS.items():
                     if name == 'fact_transaction':
                         continue

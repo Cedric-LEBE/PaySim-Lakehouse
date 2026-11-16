@@ -42,7 +42,6 @@ def main():
     from banking.gold_incremental import build as gold
     from banking.star_incremental import build as star
 
-    # Fully validate the bounded input before creating Spark state or any output.
     events = list(records(args.csv, DATASET, args.rows))
     if len(events) != args.rows:
         raise ValueError('CSV shorter than requested prefix')

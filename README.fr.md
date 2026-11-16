@@ -4,7 +4,7 @@
 
 Pipeline de données financières simulées, de l'ingestion Kafka à l'analyse SQL sur Delta Lake. Le projet met en œuvre une architecture Bronze/Silver/Gold, des contrôles de qualité, une déduplication métier et un schéma en étoile.
 
-**État : les 6 362 620 transactions ont été traitées et validées sur EC2, exportées vers S3 et importées dans Databricks Free Edition via le job DAB.** Les indicateurs utilisent les labels PaySim pour l'analyse descriptive. L'entraînement d'un modèle, le VPS et l'infrastructure AWS restent dans la [feuille de route](docs/roadmap.md).
+**État : les 6 362 620 transactions ont été traitées et validées sur EC2, exportées vers S3 et importées dans Databricks Free Edition via le job DAB.** Les indicateurs utilisent les labels PaySim pour l'analyse descriptive. Terraform, la publication reprenable et un test de restauration EBS ont également été validés. Le périmètre est Data Engineering et infrastructure, sans machine learning ni VPS supplémentaire. Voir les [preuves de validation](docs/validation-record.md), la [restauration](docs/recovery.md) et la [livraison portfolio](docs/portfolio.md).
 
 ## Architecture
 
@@ -106,7 +106,7 @@ Le premier lancement vérifie le préfixe existant. Le curseur CSV avance après
 
 ## Dashboards Databricks
 
-Le [guide d’import S3](docs/s3-import.md) décrit la connexion en lecture seule et l’import vérifié via un volume externe Unity Catalog. Le notebook accepte aussi les anciens chemins `/Volumes/`. Un premier import S3 de deux transactions synthétiques a réussi dans un schéma de test du workspace ; l’import du dataset complet reste à valider.
+Le [guide d’import S3](docs/s3-import.md) décrit la connexion en lecture seule et l’import vérifié via un volume externe Unity Catalog. Le notebook accepte aussi les anciens chemins `/Volumes/`. Un premier import S3 de deux transactions synthétiques a réussi dans un schéma de test du workspace ; l’import du dataset complet a ensuite réussi, ainsi que la publication isolée de 10 000 faits avec relance réutilisant le même run.
 
 Un export cohérent des quatre tables est disponible pour préparer une restitution dans Databricks Free Edition :
 
@@ -118,7 +118,7 @@ Le [guide du premier dashboard](docs/databricks-dashboard.md) décrit le chargem
 
 Le [bundle DAB analytique](docs/databricks-bundle.md) versionne désormais un dashboard de quatre pages et un job d'import. Les seize analyses SQL sont testées avec filtres combinés sur les 250 000 faits ; le dashboard manuel est conservé.
 
-Le [workflow de déploiement manuel](docs/deployment.md) est préparé, mais non activé : la configuration de fédération OIDC de compte nécessaire n’est pas accessible depuis Free Edition. Une option PAT explicite est préparée pour un secret GitHub protégé, sans jeton créé ni activation automatique. Le déploiement DAB local reste opérationnel.
+Le [workflow de déploiement manuel](docs/deployment.md) a été validé avec le mode PAT explicite et un secret GitHub protégé. La fédération OIDC reste une alternative non validée ici. Le déploiement DAB local utilise une authentification interactive séparée.
 
 ## Résultats de référence
 

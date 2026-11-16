@@ -53,7 +53,6 @@ def check(expected_rows, expected_amount, expected_frauds):
     reference = spark.read.format('delta').load(str(root / 'star-reference/fact_transaction')).select(*actual.columns)
     assert actual.exceptAll(reference).count() == reference.exceptAll(actual).count() == 0
     assert spark.table('fact_transaction').count() == expected_rows
-    # All four foreign keys must resolve, including both roles of the account dimension.
     joined = spark.sql('''SELECT f.transaction_key FROM fact_transaction f
       JOIN dim_transaction_type ty ON f.transaction_type_key = ty.transaction_type_key
       JOIN dim_simulation_time tm ON f.simulation_time_key = tm.simulation_time_key

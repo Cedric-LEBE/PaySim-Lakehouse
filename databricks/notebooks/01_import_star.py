@@ -1,7 +1,4 @@
 # Databricks notebook source
-# Deploy this notebook together with the sibling _import_support.py workspace file.
-# Source: four Parquet files and manifest.json in a UC volume or S3 export directory.
-# S3 URLs require an existing external volume; no AWS keys or local copies are used.
 import re
 from decimal import Decimal
 from _import_support import PRIMARY_KEYS, quote, resolve_export_path, load_manifest, verify_file
@@ -23,7 +20,6 @@ schema = dbutils.widgets.get('target_schema').strip() or 'paysim_' + manifest['e
 assert re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', schema)
 namespace = quote(catalog) + '.' + quote(schema)
 primary_keys = PRIMARY_KEYS
-# Verify every file before starting Spark validation or any target writes.
 for name, info in manifest['tables'].items():
     verify_file(export_path / info['file'], info)
 frames = {}
@@ -49,8 +45,6 @@ assert (stats.frauds or 0) == int(manifest['totals']['fraud_transactions'])
 assert (stats.fraud_amount or 0) == Decimal(manifest['totals']['fraud_amount'])
 
 # COMMAND ----------
-# A new schema per export prevents accidental replacement of a previous dashboard snapshot.
-# Resume interrupted imports, validating existing tables instead of overwriting them.
 spark.sql(f'CREATE SCHEMA IF NOT EXISTS {namespace}')
 for name, frame in frames.items():
     target = namespace + '.' + quote(name)
@@ -75,4 +69,3 @@ JOIN {namespace}.dim_account dest ON f.destination_account_key = dest.account_ke
 assert spark.table(namespace + '.transactions_dashboard').count() == manifest['tables']['fact_transaction']['rows']
 print('PASS: Tables importées et vue dashboard validée : ' + namespace + '.transactions_dashboard')
 print('Instantané exporté à : ' + manifest['created_at_utc'] + ' ; version Silver : ' + str(manifest['silver_version']))
-# Paste this fully qualified view name into the dashboard SQL files instead of {{STAR_VIEW}}.

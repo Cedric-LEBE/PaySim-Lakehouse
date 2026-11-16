@@ -15,9 +15,9 @@ This default path through the command checks the manifest, the four exact filena
 
 ## Execution prerequisites
 
-Use a host where both the existing export and authenticated AWS CLI v2 and Databricks CLI are available. EC2 has its existing instance role for S3; do not add static AWS keys. Databricks authentication must be configured independently for the stated workspace. This has not been configured or validated on EC2 yet. Do not copy a personal `.databrickscfg` or paste tokens into commands/logs as a shortcut. The runner checks Databricks CLI authentication before writing any S3 object. CLI 1.24.0 and the existing import job are the project's current baseline.
+Use a host where both the existing export and authenticated AWS CLI v2 and Databricks CLI are available. EC2 has its existing instance role for S3; do not add static AWS keys. Databricks authentication must be configured independently for the stated workspace. OAuth CLI authentication on EC2 was validated on 2026-11-16 using the `paysim-ec2` profile. Do not copy a personal `.databrickscfg` or paste tokens into commands/logs as a shortcut. The runner checks Databricks CLI authentication before writing any S3 object. CLI 1.24.0 and the existing import job are the project's current baseline.
 
-Execution is explicit by adding `--execute`. It can perform S3 writes and launch a Databricks run, using the job's existing compute/time limits and quotas. No live execution of this runner has yet been validated. For the already imported full dataset, execution is unnecessary for checking its plan.
+Execution is explicit by adding `--execute`. It can perform S3 writes and launch a Databricks run, using the job's existing compute/time limits and quotas. A live 10,000-row execution and a retry were validated on 2026-11-16; both reported the same successful run. See the [validation record](validation-record.md). For the already imported full dataset, execution is unnecessary for checking its plan.
 
 ## Steps and guarantees
 
@@ -34,6 +34,6 @@ Local state lives in ignored `data/publications/<export_id>.json`; an export-spe
 
 The local `banking.health` command remains limited to the ingestion cursor and star manifest; it does not claim that remote publication succeeded. Publication reports are separate and require this runner's remote checks. Saved publication status is a historical observation, not a continuous availability check.
 
-Mocked unit tests cover content mismatches, manifest ordering, conditional writes, refusal of partial published exports, existing-run reuse, parameter/idempotency submission and wrong-job refusal. They do not substitute for a future isolated live end-to-end publication test. The full production dataset is not republished by CI.
+Mocked unit tests cover content mismatches, manifest ordering, conditional writes, refusal of partial published exports, existing-run reuse, parameter/idempotency submission and wrong-job refusal. The separate live test validates the successful publication and same-run retry path; injected remote failures remain covered by mocked tests rather than a live outage drill. The full production dataset is not republished by CI.
 
 References: [S3 conditional object writes](https://docs.aws.amazon.com/cli/latest/reference/s3api/put-object.html), [Databricks run-now and idempotency](https://docs.databricks.com/api/jobs/v2/run-now), [run status](https://docs.databricks.com/api/jobs/v2/get-run).

@@ -43,7 +43,7 @@ Inventory findings requiring later operational decisions:
 - EC2 was `running` at collection time; verify active processes before stopping it.
 - SSH is restricted to `37.166.3.84/32`; if the user's public address changes, access can time out. No Kafka port is exposed by this group.
 - The encrypted root volume is 100 GiB gp3 (3000 IOPS, 125 MiB/s); `delete_on_termination=true` is preserved. `prevent_destroy` protects planned destruction while the resource remains configured, but does not protect deletion in the AWS console or deletion of the Terraform resource block.
-- The snapshot of configuration is not a backup of EBS data or a bill. Storage restore and actual costs still require separate checks.
+- The snapshot of configuration is not a backup of EBS data or a bill. A separate EBS restore drill passed on 2026-11-16; see the [recovery scope and limits](../../docs/recovery.md). Actual billed costs still require a separate record.
 
 ## Validation and next gate
 

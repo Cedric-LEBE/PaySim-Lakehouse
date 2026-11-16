@@ -1,20 +1,20 @@
-# Manual GitHub deployment — prepared, not activated
+# Manual GitHub deployment — validated PAT mode
 
 [Back to README](../README.md)
 
-## Current status and Free Edition limitation
+## Validated deployment and authentication scope
 
-The local `dev` deployment works with interactive Databricks CLI authentication. The manual [deploy workflow](../.github/workflows/deploy.yml) is prepared for GitHub-hosted runners with either explicit OIDC federation or an explicitly selected PAT secret. **GitHub-to-Databricks authentication is not activated or tested end to end**.
+The manual GitHub workflow has deployed the Databricks dashboard and import-job definitions successfully using explicit PAT mode with a protected `databricks-ci` environment secret. Interactive CLI OAuth is used separately on development hosts and EC2. No credentials are committed to this repository. The past successful run does not guarantee that the deployment secret is still valid; monitor expiry and rotate it when required.
 
-Databricks' documented GitHub federation setup requires a service principal and an account-level federation policy. Free Edition does not expose the account console or account-level APIs. This blocks configuring that standard OIDC route with the current Free Edition account. Read-only checks on the current workspace confirmed `enableTokensConfig=true` and access to token metadata/permission APIs; PAT creation and GitHub authentication still require an activation test. No service principal, federation policy, GitHub secret, new account or paid resource has been created. Do not enable the workflow flag to bypass this prerequisite; it cannot grant missing access.
+The OIDC alternative requires supported account-level service-principal federation configuration. It has not been validated with this Free Edition deployment. Do not describe PAT deployment success as OIDC validation.
 
-Continue deploying locally with the existing `dev` profile while deciding whether to use a supported Databricks account later. The workflow deliberately fails with an explanation when configuration is incomplete. It never exports local OAuth credentials, copies `.databrickscfg`, automatically falls back to a personal token or installs a runner on the personal computer. PAT mode must be explicitly selected and marked ready; its token belongs only in the protected GitHub environment secret.
+The workflow fails when configuration is incomplete. It never exports local OAuth credentials, copies `.databrickscfg`, automatically falls back to a personal token or installs a runner on the personal computer. PAT mode must be explicitly selected and marked ready; its token belongs only in the protected GitHub environment secret.
 
 ## Workflow behavior
 
 1. Only **Run workflow** on `main` is accepted. Push and pull-request events do not deploy.
 2. An explicit configuration check runs before Databricks authentication.
-3. The gate checks that the selected SHA is still current `main`, waits up to 15 minutes for the latest push-triggered `ci.yml` run for that exact SHA, and requires both named jobs to succeed. Failed, cancelled, skipped or different-commit results do not qualify.
+3. The gate checks that the selected SHA is still current `main`, waits up to 15 minutes for the latest push-triggered `ci.yml` run for that exact SHA, and requires all three named jobs to succeed (unit tests, Spark/Delta integration and Terraform validation). Failed, cancelled, skipped or different-commit results do not qualify.
 4. The deploy job uses the `databricks-ci` GitHub environment. In OIDC mode it requests a short-lived GitHub token; in PAT mode it reads the environment secret without logging it or the current user profile. Only this job has `id-token: write`.
 5. The pinned Databricks CLI 1.24.0 verifies the generated dashboard and strictly validates target `ci`.
 6. Main and CI are rechecked immediately before `bundle deploy`. A newer main commit blocks the old deployment.
@@ -65,7 +65,7 @@ Create the GitHub environment `databricks-ci`, restrict its deployment branches 
 
 The variables used by the preflight must be repository variables, not environment-only values: the preflight runs before entering the deployment environment. No client secret is used. OIDC mode does not need a `DATABRICKS_TOKEN`; the explicit PAT alternative uses only the protected environment secret. OIDC does not remove the account's ordinary compute/storage charges; the workflow does not run compute jobs itself.
 
-After pushing all files and observing a green CI run for the same commit, open **Actions → Deploy Databricks bundle → Run workflow → main**. An activation test remains required on the supported account. Inspect the deployment logs and bundle summary before treating continuous delivery as operational.
+After pushing all files and observing a green CI run for the same commit, open **Actions → Deploy Databricks bundle → Run workflow → main**. The manual PAT-mode deployment was successfully exercised in this project. OIDC federation has not been validated here; reruns still require valid configuration and credentials. Inspect the deployment logs and bundle summary before treating continuous delivery as operational.
 
 ## Local validation and tests
 

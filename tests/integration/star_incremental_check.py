@@ -86,7 +86,6 @@ try:
     assert resumed['counts']['dim_account'] == 5
     assert build(spark, source, output)['counts']['fact_transaction'] == 2
     parity()
-    # Empty facts retain every dimension already observed.
     retained = json.loads((output / '_snapshot.json').read_text())['counts']
     DeltaTable.forPath(spark, str(source)).delete()
     empty = build(spark, source, output)

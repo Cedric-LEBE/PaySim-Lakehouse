@@ -4,7 +4,7 @@
 
 An incremental lakehouse for simulated banking transactions: Kafka ingestion, Bronze/Silver/Gold Delta tables, data quality controls, business deduplication, a star schema and Databricks analytics dashboards.
 
-**Current status:** all **6,362,620 PaySim transactions** have been processed and validated on AWS EC2, exported to S3, and imported into Databricks. Historical local reference runs are retained below. The star schema has been imported into Databricks Free Edition, and a four-page dashboard and import job are deployed using Declarative Automation Bundles (DAB). Fraud metrics describe the dataset's labels. Remaining work focuses on Terraform adoption of the existing AWS resources, measured performance, orchestration, operations and portfolio documentation. Machine learning is outside the delivery scope. See the [delivery roadmap](docs/roadmap.md) and [AWS inventory procedure](infrastructure/aws/README.md).
+**Validated delivery:** **6,362,620 transactions** processed on AWS EC2, reconciled through an incremental Delta lakehouse, exported to S3 and imported into Databricks Free Edition. Four English analytics pages are deployed with DAB. Existing AWS resources are adopted with Terraform; publication retries reuse the same Databricks run. A stopped-instance EBS snapshot was restored to a separate volume and its CSV fingerprint, recovery metadata and four star tables were checked. This is a Data Engineering and infrastructure project; machine learning is outside scope. See the [validation record](docs/validation-record.md), [recovery runbook](docs/recovery.md) and [delivery checklist](docs/roadmap.md).
 
 ## Architecture
 
@@ -17,8 +17,13 @@ flowchart LR
     S -->|CDF| G[Gold Aggregates]
     S -->|CDF| E[Delta Star Schema]
     E --> SQL[Spark SQL]
-    E -->|Verified Parquet Snapshot| DB[Databricks Managed Tables]
-    DB --> BI[AI/BI Dashboard · DAB]
+    E -->|Verified Parquet + manifest| S3[Private S3 exports]
+    S3 -->|Read-only Unity Catalog external volume| DB[Databricks Managed Delta Tables]
+    DB --> BI[English AI/BI Dashboard]
+    TF[Terraform] -.-> AWS[EC2 · EBS · S3 · IAM · Security group]
+    CI[GitHub Actions] -.-> DAB[DAB deployment]
+    DAB -.-> DB
+    DAB -.-> BI
 ```
 
 - **Ingestion:** bounded-memory CSV replay, configurable rate, origin-account partition keys and delivery confirmation.
@@ -109,7 +114,7 @@ To extend that validated prefix without republishing rows 1–250,000:
 bash scripts/pipeline.sh --resume --max-messages 500000 --batch-rows 50000 --rate 1000 --max-offsets 5000
 ```
 
-In resume mode, `--max-messages` is the **cumulative target**, not the number of new events. The runner validates the existing published prefix once, then records CSV progress only after each range passes Bronze → Silver → Gold → star and full CSV reconciliation. Interrupted ranges can be replayed into Bronze; Silver deduplicates their stable event IDs. Keep `data/checkpoints/csv-replay.json` with the lakehouse. This historical command illustrates the first extension from 250,000 rows. The full EC2 run is complete; a repeatable performance benchmark remains to be established.
+In resume mode, `--max-messages` is the **cumulative target**, not the number of new events. The runner validates the existing published prefix once, then records CSV progress only after each range passes Bronze → Silver → Gold → star and full CSV reconciliation. Interrupted ranges can be replayed into Bronze; Silver deduplicates their stable event IDs. Keep `data/checkpoints/csv-replay.json` with the lakehouse. This historical command illustrates the first extension from 250,000 rows. The full EC2 run is complete. The [128-batch baseline](docs/performance/ec2-baseline.md) records 26.72 hours of summed stage execution; it is not a wall-clock or optimized-throughput claim. A separate 10,000-row benchmark excludes Kafka and does not replace that baseline.
 
 See [operations](docs/operations.md) and [recovery guarantees](docs/architecture.md). No cloud resources are created by these commands.
 
@@ -121,11 +126,11 @@ Export the four version-pinned star tables as a verified snapshot:
 bash scripts/export-star.sh
 ```
 
-The [S3 import guide](docs/s3-import.md) explains the read-only IAM/Unity Catalog connection and streaming SHA-256 checks through an external volume. The notebook accepts S3 export URLs or existing `/Volumes/` paths. A two-row synthetic export has been imported from S3 in the workspace; full-dataset imports remain to be validated.
+The [S3 import guide](docs/s3-import.md) explains the read-only IAM/Unity Catalog connection and streaming SHA-256 checks through an external volume. The notebook accepts S3 export URLs or existing `/Volumes/` paths. The complete 6,362,620-fact export has been imported from S3. The [publication runner](docs/publication.md) has also passed a separate 10,000-row live test and a retry using the same Databricks run ID.
 
 The [initial import guide](docs/databricks-dashboard.md) covers the four Parquet files and manifest, a managed Unity Catalog volume, the validated import notebook and managed Delta tables. This initial transfer is a manual snapshot transfer, not a live connection to local Kafka.
 
-The [analytics bundle](docs/databricks-bundle.md) deploys an English-language dashboard with **16 analyses, 31 visualizations and six shared filters**:
+The [analytics bundle](docs/databricks-bundle.md) deploys an English-language dashboard with **four analytics pages and six shared filters**:
 
 | Page | Coverage |
 | --- | --- |
@@ -144,9 +149,28 @@ databricks bundle validate --profile dev --strict --var warehouse_id=<EXISTING_W
 databricks bundle deploy --profile dev --var warehouse_id=<EXISTING_WAREHOUSE_ID>
 ```
 
-Replace the placeholder and profile as needed. The bundle reuses existing compute, defines an unscheduled import job and creates a draft dashboard. It does not configure public sharing. A [manual GitHub deployment workflow](docs/deployment.md) is prepared but not activated: the standard OIDC setup requires account-level federation configuration unavailable in Free Edition. An explicitly selected PAT mode is prepared for a protected GitHub environment secret; no token has been created or stored. Never commit authentication tokens or bundle state.
+Replace the placeholder and profile as needed. Bundle defaults retain a historical sample: explicitly supply the intended `catalog`, `schema`, `export_path` and `s3_volume` variables before deploying against the full dataset. See the [validated full snapshot configuration](docs/validation-record.md#full-snapshot-configuration). The bundle reuses existing compute, defines an unscheduled import job and creates a draft dashboard. It does not configure public sharing. The [manual GitHub deployment workflow](docs/deployment.md) has been used successfully with the explicitly selected PAT mode and a protected GitHub environment secret. OIDC remains an alternative requiring supported account-level federation configuration. Secrets require expiration monitoring and rotation; a past successful deployment does not prove that credentials are still valid. Never commit authentication tokens or bundle state.
 
 ## Validated results
+
+![Databricks Overview: 6,362,620 simulated transactions and 8,213 fraud labels](docs/images/dashboard-overview.png)
+
+Published full-snapshot dashboard with default filters. The eight KPIs are visible; the lower charts continue below the captured viewport.
+
+| Complete dataset metric | Validated result |
+| --- | ---: |
+| Unique transactions / facts | 6,362,620 |
+| Fraud-labeled transactions | 8,213 |
+| Fraud rate (rounded) | 0.1291% |
+| Total amount (no assigned currency) | 1,144,392,944,759.77 |
+| Fraud amount | 12,056,415,427.84 |
+| Observed simulation steps | 1–743 |
+| Account dimension members | 9,073,900 |
+
+The account dimension contains identifiers observed in either account role; these are simulated accounts, not verified real customers. Fraud labels are supplied by PaySim, not model predictions.
+
+### Historical reference samples
+
 
 | Metric | Fresh 100-row reference | 250,000-row reference |
 | --- | ---: | ---: |
@@ -161,6 +185,10 @@ Replace the placeholder and profile as needed. The bundle reuses existing comput
 A fresh 100-row run produces 100 Bronze events and no quarantine rows. Bronze, duplicate and quarantine counts depend on replay history. Retained historical dimensions can outnumber members referenced by current facts. These historical samples are retained for reproducibility; the full dataset has since been processed on EC2 and imported from S3.
 
 ## Tests and CI
+
+![CI for commit 4532c85: three successful validation jobs](docs/images/ci-success.png)
+
+This capture records the named historical commit. Check the latest run in GitHub Actions for current branch status. Additional dashboard, infrastructure and import screenshots are in the [portfolio gallery](docs/portfolio.md#analytics-gallery).
 
 Unit tests require neither Kafka nor Spark:
 
@@ -189,7 +217,7 @@ data/                   Local datasets and outputs, excluded from Git
 
 ## Documentation
 
-Detailed guides currently remain in French:
+English delivery guides: [validation and evidence](docs/validation-record.md), [backup and restore](docs/recovery.md), [publication](docs/publication.md), [portfolio screenshots](docs/portfolio.md), and [performance baseline](docs/performance/ec2-baseline.md). Some detailed implementation guides remain in French:
 
 | Guide | Contents |
 | --- | --- |

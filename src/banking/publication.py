@@ -52,7 +52,6 @@ def verified_export(directory):
 
 def publish(directory,manifest,call=cli):
     prefix='exports/'+manifest['export_id']+'/'
-    # List is limited to this immutable export prefix; permission failures must stop publication.
     existing={o['Key']:o for o in call(['aws','s3api','list-objects-v2','--bucket',BUCKET,'--prefix',prefix,'--region','eu-north-1','--output','json','--no-cli-pager']).get('Contents',[])}
     files=[name+'.parquet' for name in sorted(TABLES)]+['manifest.json']
     unknown=set(existing)-{prefix+name for name in files}
@@ -108,7 +107,6 @@ def main():
     if not args.execute:
         return 0
     import os
-    # Bind Databricks CLI authentication to this workspace; credentials remain external.
     os.environ['DATABRICKS_HOST']=identity['workspace']
     cli(['databricks','current-user','me'])  # Fail before upload if CLI authentication is unavailable.
     root=Path(__file__).resolve().parents[2]

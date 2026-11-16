@@ -101,7 +101,6 @@ def polish(definition):
                                     'scale': {'type': 'categorical', 'mappings': [
                                         {'value': label, 'color': CORAL if label=='Fraud labels' else '#3274C5'}]}}
         if page['name'] == 'overview':
-            # Four headline metrics, followed by amount detail; exact transaction counts.
             by_field = {item['widget']['spec']['encodings']['value']['fieldName']: item for item in layout[1:9]}
             order = ['transactions','total_amount','fraud_transactions','fraud_rate',
                      'average_amount','median_amount','fraud_amount','fraud_amount_share']
