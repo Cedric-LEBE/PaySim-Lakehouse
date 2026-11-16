@@ -204,3 +204,7 @@ Le contrôle lit le curseur, le manifeste de publication et le dernier rapport. 
 Ce contrôle ne démarre pas Spark/Kafka, n'analyse pas les tables Delta et ne vérifie ni S3 ni Databricks. Il ne prouve ni l'absence de blocage d'un processus actif ni l'intégrité d'une sauvegarde. La comparaison des données reste assurée par le pipeline et ses contrôles existants. Ne jamais corriger un incident en modifiant manuellement le curseur.
 
 La suite d'orchestration prévue reliera l'export vérifié, sa publication S3 (manifeste en dernier) et le job d'import Databricks. Les statuts de ces étapes distantes devront être suivis séparément du succès local. Aucun nouvel export ou import du dataset complet n'est nécessaire pour préparer ce mécanisme.
+
+## Publication distante
+
+Le [lanceur de publication reprenable](publication.md) valide un export existant, publie ses fichiers S3 sans écrasement puis suit le job d’import Databricks existant. Son mode par défaut affiche seulement le plan après vérification locale. Les 55 tests unitaires incluent les refus de conflit et la réutilisation du run ; la connexion et l’exécution réelle de ce lanceur restent à valider séparément, sur un export synthétique.
