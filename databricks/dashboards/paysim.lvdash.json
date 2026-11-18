@@ -3552,7 +3552,7 @@
             "name": "overview_intro",
             "multilineTextboxSpec": {
               "lines": [
-                "# Overview\n\nSynthetic PaySim banking transactions • Selected snapshot and filters • Simulation hours, no calendar dates or assigned currency • Imported data, not a live feed. Percentiles are approximate."
+                "# Overview\n\nComprehensive overview of banking transactions, financial activity, and fraud detection insights across the PaySim dataset."
               ]
             }
           },
@@ -4421,7 +4421,7 @@
             "name": "time_intro",
             "multilineTextboxSpec": {
               "lines": [
-                "# Activity Over Time\n\nActivity across the selected simulation hours. Hours are relative, not calendar dates. The first hourly change is undefined; simulated patterns do not establish real-world seasonality or forecasts."
+                "# Activity Over Time\n\nDetailed analysis of banking transaction activity, volumes, amounts, and fraud trends across simulation time periods."
               ]
             }
           },
@@ -5074,7 +5074,7 @@
             "name": "fraud_intro",
             "multilineTextboxSpec": {
               "lines": [
-                "# Fraud Analysis\n\nLabels identify known simulated fraud, not predictions. The PaySim flag is not our trained model. Undefined precision remains NULL; high accuracy can conceal poor fraud recall. Relative rates use the filtered population."
+                "# Fraud Analysis\n\nComprehensive analysis of fraudulent transactions, fraud patterns, financial exposure, and risk distribution across banking activities."
               ]
             }
           },
@@ -6103,7 +6103,7 @@
             "name": "accounts_intro",
             "multilineTextboxSpec": {
               "lines": [
-                "# Accounts and Transactions\n\nTop 20 accounts per role, 30 fraud-related roles and 500 transaction details. Role counts are not unique frauds; transaction balances are not consolidated balances. Display references use 12 characters; full IDs remain in the dataset."
+                "# Accounts and Transactions\n\nIn-depth analysis of account activity, transaction flows, financial balances, and behavioral patterns across the PaySim dataset."
               ]
             }
           },

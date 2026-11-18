@@ -221,7 +221,7 @@ def build():
             if color:
                 spec['encodings']['color']={'fieldName':color,'displayName':LABELS.get(color,color.replace('_',' ').title()),'scale':{'type':'categorical'}}
         layout.append({'widget':{'name':f'{pages[-1]["name"]}_{len(layout)}','queries':[{'name':'main_query','query':{'datasetName':ds,'fields':fields,'disaggregated':True}}],'spec':spec},'position':{'x':x,'y':y,'width':width,'height':height}})
-    note='Synthetic PaySim banking transactions • Selected snapshot and filters • Simulation hours, no calendar dates or assigned currency • Imported data, not a live feed. Percentiles are approximate.'
+    note='Comprehensive overview of banking transactions, financial activity, and fraud detection insights across the PaySim dataset.'
     layout=page('overview','Overview',note)
     for i,(col,title,pct) in enumerate([('transactions','Transactions',False),('total_amount','Total Amount',False),('average_amount','Average Amount',False),('median_amount','Approximate Median Amount',False),('fraud_transactions','Fraudulent Transactions (PaySim Labels)',False),('fraud_rate','Fraud Rate',True),('fraud_amount','Fraud Amount',False),('fraud_amount_share','Fraudulent Share of Total Amount',True)]):
         widget(layout,'01_summary',title,[col],'counter',x=(i%4)*3,y=3+(i//4)*3,width=3,height=3,percent=pct)
@@ -229,7 +229,7 @@ def build():
     widget(layout,'02_by_type','Amounts by Type',['transaction_type','total_amount'],'bar',x=6,y=9,width=6)
     widget(layout,'06_amount_distribution','Amount Distribution — Transaction Counts',['amount_band','transactions'],'bar',y=15,width=6)
     widget(layout,'02_by_type','Summary by Type',['transaction_type','transactions','total_amount','average_amount','median_amount','fraud_transactions','fraud_rate'],x=6,y=15,width=6)
-    layout=page('time','Activity Over Time','Activity across the selected simulation hours. Hours are relative, not calendar dates. The first hourly change is undefined; simulated patterns do not establish real-world seasonality or forecasts.')
+    layout=page('time','Activity Over Time','Detailed analysis of banking transaction activity, volumes, amounts, and fraud trends across simulation time periods.')
     for i,(ds,title,cols,kind,color) in enumerate([
         ('03_hourly','Transactions by Simulation Hour',['simulation_step','transactions'],'line',None),
         ('03_hourly','Amounts by Simulation Hour',['simulation_step','total_amount'],'line',None),
@@ -238,7 +238,7 @@ def build():
         ('05_hour_change','Change in Observed Transaction Counts',['simulation_step','transaction_change','transaction_growth'],'table',None),
         ('03_hourly','Hourly Metrics',['simulation_step','transactions','total_amount','average_amount','fraud_transactions','fraud_rate'],'table',None)]):
         widget(layout,ds,title,cols,kind,x=(i%2)*6,y=3+(i//2)*6,width=6,color=color)
-    layout=page('fraud','Fraud Analysis','Labels identify known simulated fraud, not predictions. The PaySim flag is not our trained model. Undefined precision remains NULL; high accuracy can conceal poor fraud recall. Relative rates use the filtered population.')
+    layout=page('fraud','Fraud Analysis','Comprehensive analysis of fraudulent transactions, fraud patterns, financial exposure, and risk distribution across banking activities.')
     for i,(ds,title,cols,kind) in enumerate([
         ('08_type_risk','Fraud Rate by Type',['transaction_type','fraud_rate'],'bar'),
         ('08_type_risk','Fraud by Type and Relative Rate',['transaction_type','transactions','fraud_transactions','fraud_rate','relative_rate','fraud_amount'],'table'),
@@ -248,7 +248,7 @@ def build():
         ('10_flag_metrics','Descriptive Evaluation of the PaySim Flag',['tp','fp','fn','tn','precision_flag','recall_flag','f1_flag','accuracy_flag'],'table'),
         ('15_balance_changes','Observed Balance Changes per Transaction',['transaction_type','fraud_label','transactions','average_amount','average_origin_change','average_destination_change','origin_zero_after'],'table')]):
         widget(layout,ds,title,cols,kind,x=(i%2)*6,y=3+(i//2)*6,width=12 if i==6 else 6)
-    layout=page('accounts','Accounts and Transactions','Top 20 accounts per role, 30 fraud-related roles and 500 transaction details. Role counts are not unique frauds; transaction balances are not consolidated balances. Display references use 12 characters; full IDs remain in the dataset.')
+    layout=page('accounts','Accounts and Transactions','In-depth analysis of account activity, transaction flows, financial balances, and behavioral patterns across the PaySim dataset.')
     for i,(ds,title,cols,kind) in enumerate([
         ('11_origin_accounts','Top 20 Origin Accounts by Amount',['origin_account','transactions','total_amount','distinct_counterparties','fraud_transactions'],'table'),
         ('12_destination_accounts','Top 20 Destination Accounts by Amount',['destination_account','transactions','total_amount','distinct_counterparties','fraud_transactions'],'table'),

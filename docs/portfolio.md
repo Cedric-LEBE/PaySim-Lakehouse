@@ -36,7 +36,7 @@ Example captions:
 - “An isolated 10,000-row publication retry reused the same successful Databricks run.”
 - “A restored EBS copy passed the CSV fingerprint, recovery metadata and pinned star-table read/count checks.”
 
-State limits alongside achievements: one Kafka broker, snapshot-based Databricks analytics, repeated full-prefix checks in the measured baseline, and no predictive model. The [validation record](validation-record.md) is the source for precise claims. The Overview screenshot is included as `docs/images/dashboard-overview.png` (received 2026-11-16). It shows all eight KPIs with default filters; the lower charts are cropped by the viewport. Fraud Analysis was also received on 2026-11-16 and is included below. The included evidence is listed above; no placeholders are presented as completed evidence.
+State limits alongside achievements: one Kafka broker, snapshot-based Databricks analytics, repeated full-prefix checks in the measured baseline, and no predictive model. The [validation record](validation-record.md) is the source for precise claims. The four dashboard screenshots were refreshed on 2026-11-18 with the approved page titles and descriptions. Overview shows all eight KPIs with default filters; lower charts are cropped by the viewport. The included evidence is listed above; no placeholders are presented as completed evidence.
 
 ## Analytics gallery
 
@@ -46,11 +46,11 @@ The supplied PaySim flag catches 16 of 8,213 fraud-labeled transactions (0.1948%
 
 ![Activity Over Time: transaction counts and amounts by simulation hour](images/dashboard-time.png)
 
-Full-snapshot activity by relative simulation hour, with default filters. The two main charts are fully visible; the lower type and fraud charts continue below the viewport. These simulated patterns are not evidence of real-world seasonality. Received 2026-11-16.
+Full-snapshot activity by relative simulation hour, with default filters. The two main charts are fully visible; the lower type and fraud charts continue below the viewport. These simulated patterns are not evidence of real-world seasonality. Updated 2026-11-18.
 
 ![Accounts and Transactions: origin and destination account rankings](images/dashboard-accounts.png)
 
-Account rankings by transaction amount, with counts and distinct counterparties for each account role. Identifiers belong to the synthetic PaySim dataset. Default filters retain the full snapshot; the visible rows are a viewport into each Top 20 table. Received 2026-11-16.
+Account rankings by transaction amount, with counts and distinct counterparties for each account role. Identifiers belong to the synthetic PaySim dataset. Default filters retain the full snapshot; the visible rows are a viewport into each Top 20 table. Updated 2026-11-18.
 
 ## Infrastructure evidence
 
