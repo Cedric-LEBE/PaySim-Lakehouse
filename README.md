@@ -19,7 +19,7 @@ flowchart LR
     E --> SQL[Spark SQL]
     E -->|Verified Parquet + manifest| S3[Private S3 exports]
     S3 -->|Read-only Unity Catalog external volume| DB[Databricks Managed Delta Tables]
-    DB --> BI[Dashbord]
+    DB --> BI[Dashboard]
     TF[Terraform] -.-> AWS[EC2 · EBS · S3 · IAM · Security group]
     CI[GitHub Actions] -.-> DAB[DAB deployment]
     DAB -.-> DB
